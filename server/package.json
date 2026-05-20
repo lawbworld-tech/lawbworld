@@ -1,0 +1,30 @@
+{
+  "name": "lawbworld-server",
+  "version": "0.1.0",
+  "description": "Lawbworld API server — bridges gitlawb.com repos to the 3D city frontend and on-chain NFT layer.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "gen-art": "node scripts/generate-art.js",
+    "gen-art:force": "node scripts/generate-art.js --force"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "ethers": "^6.16.0",
+    "express": "^4.19.2",
+    "sharp": "^0.34.5"
+  },
+  "keywords": [
+    "lawbworld",
+    "gitlawb",
+    "nft",
+    "voxel",
+    "city"
+  ],
+  "license": "MIT"
+}

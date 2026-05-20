@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>LAWBWORLD · Mint</title>
+<link rel="icon" type="image/jpeg" href="/assets/logo.jpg" />
+<link rel="apple-touch-icon" href="/assets/logo.jpg" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --bg-0:#060912; --surface:rgba(15,20,35,0.78); --surface-2:rgba(20,28,48,0.92);
+    --border:rgba(0,245,212,0.18); --border-strong:rgba(0,245,212,0.45);
+    --text:#e7ecf3; --text-dim:#8a93a8; --text-muted:#525c72;
+    --accent:#00f5d4; --gold:#ffbe0b; --danger:#ff3b3b;
+    --pixel:'Silkscreen',monospace; --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  html,body{min-height:100%;background:var(--bg-0);color:var(--text);font-family:var(--mono);}
+  body{
+    background:
+      radial-gradient(circle at 30% 10%, rgba(0,245,212,0.08), transparent 50%),
+      radial-gradient(circle at 70% 90%, rgba(251,191,36,0.05), transparent 50%),
+      var(--bg-0);
+  }
+  a{color:inherit;text-decoration:none;}
+  button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer;}
+
+  header{
+    position:sticky;top:0;z-index:10;backdrop-filter:blur(14px);
+    background:linear-gradient(180deg, rgba(6,9,18,0.95), rgba(6,9,18,0.7));
+    border-bottom:1px solid var(--border);
+  }
+  .head-row{
+    max-width:1480px;margin:0 auto;padding:12px 20px;
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{
+    width:34px;height:34px;display:block;
+    object-fit:cover;
+    background:var(--accent);
+    box-shadow:0 0 0 2px #001110, 0 0 20px rgba(0,245,212,0.55);
+    image-rendering:pixelated;
+  }
+  .brand-name{font-family:var(--pixel);font-size:16px;letter-spacing:1px;}
+  .brand-name span{color:var(--accent);}
+  nav.tabs{display:flex;gap:6px;margin-left:auto;}
+  .tab{
+    font-family:var(--pixel);font-size:9px;letter-spacing:1px;
+    padding:8px 14px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text-dim);transition:all 0.15s;
+  }
+  .tab:hover{color:var(--accent);border-color:var(--border-strong);}
+  .tab.active{color:var(--bg-0);background:var(--accent);border-color:var(--accent);}
+
+  main{max-width:1100px;margin:0 auto;padding:30px 20px 60px;}
+  .layout{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:start;}
+  @media (max-width:880px){ .layout{grid-template-columns:1fr;gap:20px;} }
+
+  .art-wrap{
+    background:var(--surface-2);border:1px solid var(--border-strong);
+    box-shadow:0 0 40px rgba(0,245,212,0.18);
+    overflow:hidden;position:relative;
+  }
+  .art-wrap img{
+    width:100%;aspect-ratio:1/1;object-fit:cover;display:block;image-rendering:pixelated;
+  }
+  .art-wrap .empty-art{
+    aspect-ratio:1/1;display:grid;place-items:center;color:var(--text-muted);
+    font-family:var(--pixel);font-size:11px;letter-spacing:2px;line-height:2;
+  }
+  .art-meta{
+    padding:12px 16px;display:flex;justify-content:space-between;align-items:center;
+    border-top:1px solid var(--border);font-family:var(--pixel);font-size:9px;letter-spacing:1px;
+  }
+  .art-meta .token{color:var(--gold);}
+  .art-meta .source{color:var(--text-muted);}
+
+  .detail{display:flex;flex-direction:column;gap:14px;}
+  .rarity-banner{
+    font-family:var(--pixel);font-size:10px;letter-spacing:2px;padding:7px 12px;
+    border:1px solid currentColor;align-self:flex-start;
+  }
+  h1{
+    font-family:var(--pixel);font-size:22px;letter-spacing:1.2px;
+    color:var(--text);line-height:1.25;word-break:break-all;
+  }
+  .owner{font-size:11px;color:var(--text-dim);}
+  .owner a{color:var(--accent);}
+  .desc{
+    background:var(--surface);border:1px solid var(--border);
+    padding:14px;font-size:12px;line-height:1.6;color:var(--text-dim);
+  }
+  .desc strong{color:var(--text);}
+
+  .attrs{
+    display:grid;grid-template-columns:repeat(2, 1fr);gap:8px;
+  }
+  .attr{
+    padding:10px 12px;background:var(--surface);border:1px solid var(--border);
+  }
+  .attr .k{font-family:var(--pixel);font-size:7px;letter-spacing:1.5px;color:var(--text-muted);}
+  .attr .v{margin-top:4px;font-size:13px;color:var(--text);font-weight:500;}
+  .attr .v.rarity{font-family:var(--pixel);font-size:11px;letter-spacing:0.8px;}
+  .attr .v.gold{color:var(--gold);}
+  .attr .v.acc{color:var(--accent);}
+
+  .mint-row{
+    margin-top:6px;display:flex;flex-direction:column;gap:10px;
+  }
+  .btn-mint{
+    padding:16px;background:var(--accent);color:#001110;
+    font-family:var(--pixel);font-size:13px;letter-spacing:2px;
+    border:2px solid var(--accent);transition:all 0.15s;
+    box-shadow:0 0 30px rgba(0,245,212,0.35);
+  }
+  .btn-mint:hover{background:#00ffe5;box-shadow:0 0 50px rgba(0,245,212,0.55);}
+  .btn-mint:disabled{
+    opacity:0.5;cursor:not-allowed;box-shadow:none;
+    background:rgba(0,245,212,0.15);border-color:var(--border);
+  }
+  .btn-mint.owned{
+    background:rgba(251,191,36,0.12);color:var(--gold);border-color:var(--gold);
+    box-shadow:0 0 24px rgba(251,191,36,0.25);
+  }
+  .btn-secondary{
+    padding:11px;background:transparent;color:var(--text);
+    font-family:var(--pixel);font-size:10px;letter-spacing:1.5px;
+    border:1px solid var(--border);transition:all 0.15s;
+  }
+  .btn-secondary:hover{border-color:var(--border-strong);color:var(--accent);}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--surface-2);border:1px solid var(--accent);
+    padding:12px 22px;font-family:var(--pixel);font-size:11px;letter-spacing:1.5px;
+    box-shadow:0 0 30px rgba(0,245,212,0.45);opacity:0;pointer-events:none;
+    transition:opacity 0.3s, transform 0.3s;z-index:30;color:var(--accent);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.gold{border-color:var(--gold);color:var(--gold);box-shadow:0 0 30px rgba(251,191,36,0.45);}
+  .toast.error{border-color:var(--danger);color:var(--danger);}
+
+  .loader{
+    padding:80px 20px;text-align:center;color:var(--text-muted);
+    font-family:var(--pixel);font-size:11px;letter-spacing:2px;
+  }
+
+  .btn-upgrade{
+    padding:14px;background:rgba(192,132,252,0.12);color:#d8b4fe;
+    font-family:var(--pixel);font-size:12px;letter-spacing:1.5px;
+    border:2px solid #c084fc;transition:all 0.15s;
+    box-shadow:0 0 16px rgba(192,132,252,0.25);
+  }
+  .btn-upgrade:hover{background:rgba(192,132,252,0.22);box-shadow:0 0 30px rgba(192,132,252,0.45);}
+  .btn-upgrade:disabled{opacity:0.5;cursor:not-allowed;box-shadow:none;}
+
+  .level-pill{
+    font-family:var(--pixel);font-size:9px;letter-spacing:1.5px;color:var(--gold);
+    padding:5px 9px;border:1px solid var(--gold);background:rgba(251,191,36,0.06);
+    align-self:flex-start;
+  }
+  .level-bar{display:flex;gap:3px;margin-top:6px;}
+  .level-cell{flex:1;height:7px;background:rgba(255,255,255,0.06);border:1px solid var(--border);}
+  .level-cell.filled{background:var(--gold);box-shadow:0 0 5px var(--gold);}
+
+  .progress{
+    margin-top:10px;border:1px solid var(--border);background:rgba(0,0,0,0.35);padding:8px 10px;
+  }
+  .progress.hidden{display:none;}
+  .progress-head{font-family:var(--pixel);font-size:8px;letter-spacing:1px;color:var(--accent);}
+  .progress-bar{height:5px;margin-top:6px;background:rgba(255,255,255,0.07);border:1px solid var(--border);overflow:hidden;}
+  .progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--gold),var(--accent));transition:width 0.4s ease;}
+  .progress-status{margin-top:5px;font-family:var(--pixel);font-size:8px;letter-spacing:0.8px;color:var(--text-dim);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+    <a href="/" class="brand">
+      <img class="brand-mark" src="/assets/logo.jpg" alt="Lawbworld logo" />
+      <div class="brand-name">LAWB<span>WORLD</span></div>
+    </a>
+    <nav class="tabs">
+      <a class="tab" href="/">CITY</a>
+      <a class="tab" href="/discover">DISCOVER</a>
+      <a class="tab active" href="#">MINT</a>
+      <button class="tab" id="btnConnect" style="border-color:var(--accent);color:var(--accent);">CONNECT</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div id="content" class="loader">▌ LOADING REPO…</div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script src="/wallet.js"></script>
+<script>
+const API = window.location.origin + "/api";
+const RARITY_COLOR = { COMMON:"#5b6478", UNCOMMON:"#34d399", RARE:"#38bdf8", EPIC:"#c084fc", LEGENDARY:"#fbbf24" };
+
+function formatSize(kb){
+  if(kb < 1024) return kb + " KB";
+  return (kb/1024).toFixed(2) + " MB";
+}
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+function toast(msg, kind = ""){
+  const el = document.getElementById("toast");
+  el.className = "toast " + kind;
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 2600);
+}
+
+function getRepoIdFromUrl(){
+  const params = new URLSearchParams(window.location.search);
+  return params.get("id");
+}
+
+let CURRENT_REPO = null;
+const connectBtn = document.getElementById("btnConnect");
+
+function updateConnectBtn(){
+  if (LawbWallet.address) {
+    connectBtn.textContent = LawbWallet.short();
+    connectBtn.title = LawbWallet.address;
+  } else {
+    connectBtn.textContent = "CONNECT";
+    connectBtn.title = "Connect wallet";
+  }
+}
+
+connectBtn.addEventListener("click", async () => {
+  if (LawbWallet.address) {
+    LawbWallet.disconnect();
+    updateConnectBtn();
+    if (CURRENT_REPO) render(CURRENT_REPO);
+    return;
+  }
+  try {
+    await LawbWallet.connect();
+    updateConnectBtn();
+    if (CURRENT_REPO) render(CURRENT_REPO);
+    toast("✓ wallet connected", "gold");
+  } catch (e) {
+    toast(e.message, "error");
+  }
+});
+
+LawbWallet.onAccountsChanged(async (accts) => {
+  if (!accts.length) { LawbWallet.disconnect(); }
+  else { await LawbWallet.restore(); }
+  updateConnectBtn();
+  if (CURRENT_REPO) render(CURRENT_REPO);
+});
+
+LawbWallet.restore().then(() => {
+  updateConnectBtn();
+  if (CURRENT_REPO) render(CURRENT_REPO);
+});
+
+async function loadRepo(){
+  const fullId = getRepoIdFromUrl();
+  if(!fullId){
+    document.getElementById("content").innerHTML = `<div class="loader" style="color:var(--danger);">▌ no repo id in url<br><br><a href="/discover" style="color:var(--accent);">▶ go to discover</a></div>`;
+    return;
+  }
+  try {
+    const parts = fullId.split("/");
+    if(parts.length < 2) throw new Error("bad id");
+    const did = parts[0];
+    const name = parts.slice(1).join("/");
+    const r = await fetch(`${API}/repos/${encodeURIComponent(did)}/${encodeURIComponent(name)}`).then(r => r.json());
+    if(!r.ok) throw new Error(r.error || "not found");
+    CURRENT_REPO = r.repo;
+    await refreshOnchain(r.repo);
+    render(r.repo);
+  } catch (e) {
+    document.getElementById("content").innerHTML = `<div class="loader" style="color:var(--danger);">▌ failed to load — ${esc(e.message)}<br><br><a href="/discover" style="color:var(--accent);">▶ back to discover</a></div>`;
+  }
+}
+
+let ONCHAIN = null;
+async function refreshOnchain(repo){
+  try {
+    ONCHAIN = await LawbWallet.getOnchainStatus(repo.fullId);
+  } catch (_) { ONCHAIN = null; }
+}
+
+function render(repo){
+  const art = repo.imageUrl || repo.artUrl;
+  const color = RARITY_COLOR[repo.rarity] || "#5b6478";
+  const me = LawbWallet.address;
+  const oc = ONCHAIN;
+  const minted = !!(oc && oc.minted) || !!repo.minted;
+  const owner  = oc?.owner || repo.owner;
+  const level  = oc?.level || repo.level || 1;
+  const ownByMe = minted && me && owner && owner.toLowerCase() === me.toLowerCase();
+  const atMax = level >= 10;
+  const cells = Array.from({length: 10}, (_, i) => `<div class="level-cell ${i < level ? 'filled' : ''}"></div>`).join("");
+  document.getElementById("content").innerHTML = `
+    <div class="layout">
+      <div class="art-wrap">
+        ${art ? `<img src="${esc(art)}" alt="${esc(repo.name)}" />` : `<div class="empty-art">▌ ART<br>NOT YET<br>GENERATED</div>`}
+        <div class="art-meta">
+          <span class="token">TOKEN #${repo.tokenId || "—"}</span>
+          <span class="source">LAWBWORLD COLLECTION</span>
+        </div>
+      </div>
+      <div class="detail">
+        <span class="rarity-banner" style="color:${color}">▌ ${esc(repo.rarity)}</span>
+        <h1>${esc(repo.name)}</h1>
+        <div class="owner">
+          ${minted
+            ? `owned by <span style="color:${ownByMe?'var(--accent)':'var(--text)'}">${ownByMe ? "YOU" : (repo.owner ? repo.owner.slice(0,8)+"…"+repo.owner.slice(-4) : "—")}</span>`
+            : `repo by <a href="https://gitlawb.com/node/repos/${esc(repo.did)}/${esc(repo.name)}" target="_blank" rel="noopener">@${esc(repo.did.slice(0,12))}…</a>`}
+        </div>
+        <div class="desc"><strong>${esc(repo.fullId)}</strong><br>${esc(repo.desc || "Federated repository hosted on gitlawb p2p mirrors.")}</div>
+        <div class="attrs">
+          <div class="attr">
+            <div class="k">LEVEL</div>
+            <div class="v gold">${level} / 10</div>
+            <div class="level-bar">${cells}</div>
+          </div>
+          <div class="attr"><div class="k">RARITY</div><div class="v rarity" style="color:${color}">${esc(repo.rarity)}</div></div>
+          <div class="attr"><div class="k">FILE SIZE</div><div class="v">${formatSize(repo.fileSizeKB)}</div></div>
+          <div class="attr"><div class="k">STARS</div><div class="v acc">★ ${repo.stars || 0}</div></div>
+          <div class="attr"><div class="k">VISITS</div><div class="v">${repo.visits || 0}</div></div>
+          <div class="attr"><div class="k">COMMITS</div><div class="v">${repo.commits || 0}</div></div>
+        </div>
+        <div class="mint-row">
+          ${minted
+            ? (ownByMe
+                ? (atMax
+                    ? `<button class="btn-mint owned" disabled>✓ MAX LEVEL · L10</button>`
+                    : `<button class="btn-upgrade" id="btnUpgrade">⬆ LEVEL UP · L${level} → L${level+1}</button>`)
+                : `<button class="btn-mint owned" disabled>✓ MINTED · L${level} · ${owner ? owner.slice(0,6)+'…'+owner.slice(-4) : ''}</button>`)
+            : (me
+                ? `<button class="btn-mint" id="btnMint">▶ MINT — 0.00028 ETH</button>`
+                : `<button class="btn-mint" id="btnMint">▶ CONNECT WALLET TO MINT</button>`)}
+          <div class="progress hidden" id="progress">
+            <div class="progress-head" id="progressHead">▌ READY</div>
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="progress-status" id="progressStatus">—</div>
+          </div>
+          <a class="btn-secondary" href="https://gitlawb.com/node/repos/${esc(repo.did)}/${esc(repo.name)}" target="_blank" rel="noopener" style="text-align:center;">↗ VISIT REPO ON GITLAWB</a>
+          <a class="btn-secondary" href="/discover" style="text-align:center;">◄ BACK TO DISCOVER</a>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const btnM = document.getElementById("btnMint");
+  if(btnM) btnM.addEventListener("click", () => mint(repo));
+  const btnU = document.getElementById("btnUpgrade");
+  if(btnU) btnU.addEventListener("click", () => upgrade(repo));
+}
+
+function showProgress(label, pct, status){
+  const el = document.getElementById("progress");
+  if(!el) return;
+  el.classList.remove("hidden");
+  document.getElementById("progressHead").textContent = "▌ " + label;
+  document.getElementById("progressFill").style.width = pct + "%";
+  document.getElementById("progressStatus").textContent = status;
+}
+function hideProgress(){
+  const el = document.getElementById("progress");
+  if(el) el.classList.add("hidden");
+}
+
+async function upgrade(repo){
+  const btn = document.getElementById("btnUpgrade");
+  if (!LawbWallet.address) {
+    try { await LawbWallet.connect(); updateConnectBtn(); render(repo); } catch (e) { toast(e.message, "error"); }
+    return;
+  }
+  btn.disabled = true;
+  try {
+    showProgress("LEVEL UP", 5, "starting…");
+    const r = await LawbWallet.upgrade(repo.fullId, (pct, status) => showProgress("LEVEL UP", pct, status));
+    toast(`✓ LEVELED UP · ${r.tx.slice(0,10)}…`, "gold");
+    setTimeout(() => loadRepo(), 800);
+  } catch (e) {
+    showProgress("LEVEL UP", 0, "✗ " + (e.shortMessage || e.message || "failed"));
+    toast(e.shortMessage || e.message || "upgrade failed", "error");
+    btn.disabled = false;
+    setTimeout(hideProgress, 3000);
+  }
+}
+
+async function mint(repo){
+  const btn = document.getElementById("btnMint");
+  if (!LawbWallet.address) {
+    try { await LawbWallet.connect(); updateConnectBtn(); render(repo); }
+    catch (e) { toast(e.message, "error"); }
+    return;
+  }
+  btn.disabled = true; btn.textContent = "▌ MINTING…";
+  try {
+    showProgress("MINT", 5, "starting…");
+    const r = await LawbWallet.mint(repo.fullId, (pct, status) => showProgress("MINT", pct, status));
+    toast(`✓ MINTED · ${r.tx.slice(0,10)}…`, "gold");
+    setTimeout(loadRepo, 800);
+  } catch (e) {
+    showProgress("MINT", 0, "✗ " + (e.shortMessage || e.message || "failed"));
+    toast(e.shortMessage || e.message || "mint failed", "error");
+    btn.disabled = false; btn.textContent = "▶ MINT — 0.00028 ETH";
+    setTimeout(hideProgress, 3000);
+  }
+}
+
+loadRepo();
+</script>
+</body>
+</html>

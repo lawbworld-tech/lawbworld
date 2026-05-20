@@ -1,0 +1,64 @@
+# ====== secrets / env (NEVER COMMIT) ======
+.env
+.env.*
+!.env.example
+*.env
+contracts/.env
+server/.env
+
+# ====== private keys / secret files ======
+*.pem
+*.key
+*.p12
+*.keystore
+id_rsa
+id_rsa.pub
+keystore/
+secrets/
+credentials/
+
+# ====== node ======
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+package-lock.json
+
+# ====== hardhat / contracts build artifacts ======
+contracts/artifacts/
+contracts/cache/
+contracts/coverage/
+contracts/coverage.json
+contracts/typechain/
+contracts/typechain-types/
+contracts/.openzeppelin/
+contracts/deployments/
+
+# ====== lawbworld server runtime state ======
+server/data/state.json
+server/data/repos.json
+server/data/art/
+server/data/art-thumb/
+server/data/art-cutout/
+server/data/art.bak.*/
+
+# ====== editor / OS ======
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ====== logs / tmp ======
+*.log
+logs/
+tmp/
+.cache/
+
+# ====== screenshots / scratch ======
+Screenshot*.png
+screenshot*.png
+*.mp4
+*.mov

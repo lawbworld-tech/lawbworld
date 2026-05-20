@@ -1,0 +1,3692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>LAWBWORLD — Where Repos Build Cities</title>
+<link rel="icon" type="image/jpeg" href="/assets/logo.jpg" />
+<link rel="apple-touch-icon" href="/assets/logo.jpg" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --bg-0:#060912;
+    --bg-1:#0a0f1f;
+    --bg-2:#111a2e;
+    --surface:rgba(15,20,35,0.78);
+    --surface-2:rgba(20,28,48,0.92);
+    --border:rgba(0,245,212,0.18);
+    --border-strong:rgba(0,245,212,0.45);
+    --text:#e7ecf3;
+    --text-dim:#8a93a8;
+    --text-muted:#525c72;
+    --accent:#00f5d4;
+    --accent-2:#ff006e;
+    --gold:#ffbe0b;
+    --danger:#ff3b3b;
+    --common:#5b6478;
+    --uncommon:#34d399;
+    --rare:#38bdf8;
+    --epic:#c084fc;
+    --legendary:#fbbf24;
+    --pixel:'Silkscreen',monospace;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  html,body{height:100%;overflow:hidden;}
+  body{font-family:var(--mono);background:var(--bg-0);color:var(--text);user-select:none;-webkit-font-smoothing:antialiased;}
+  button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer;}
+
+  /* Was a 3-row grid (auto 1fr auto) — but #hud and #canvas-stage are position:absolute,
+     so only #topbar and #dock landed in the flow. Dock ended up filling the 1fr row and
+     blocking every click on the city. All overlays are absolutely positioned now. */
+  #app{position:fixed;inset:0;}
+  #canvas-stage{position:absolute;inset:0;z-index:0;}
+  #canvas-stage canvas{display:block;width:100%;height:100%;}
+  #canvas-stage::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(ellipse at center 70%, transparent 30%, rgba(0,0,0,0.45) 100%),
+      repeating-linear-gradient(0deg, rgba(0,255,170,0.014) 0px, rgba(0,255,170,0.014) 1px, transparent 1px, transparent 3px);
+  }
+
+  /* TOPBAR */
+  #topbar{
+    position:absolute;top:0;left:0;right:0;z-index:5;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 18px;
+    background:linear-gradient(180deg, rgba(6,9,18,0.95), rgba(6,9,18,0.6));
+    border-bottom:1px solid var(--border);
+    backdrop-filter:blur(8px);
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{
+    width:34px;height:34px;display:block;
+    object-fit:cover;
+    background:var(--accent);
+    box-shadow:0 0 0 2px #001110, 0 0 20px rgba(0,245,212,0.55);
+    image-rendering:pixelated;
+  }
+  .brand-name{font-family:var(--pixel);font-size:16px;letter-spacing:1px;}
+  .brand-name span{color:var(--accent);}
+  .brand-meta{display:flex;flex-direction:column;font-size:9px;color:var(--text-dim);line-height:1.2;}
+  .brand-meta b{color:var(--accent);font-weight:500;letter-spacing:0.5px;}
+
+  .nav{display:flex;gap:5px;align-items:center;}
+  .nav-btn{
+    font-family:var(--pixel);font-size:9px;letter-spacing:1px;
+    padding:8px 12px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text-dim);
+    transition:all 0.15s ease;text-transform:uppercase;
+  }
+  .nav-btn:hover{color:var(--accent);border-color:var(--border-strong);background:var(--surface-2);}
+  .nav-btn.active{color:var(--bg-0);background:var(--accent);border-color:var(--accent);}
+  .nav-btn.nav-x{color:#fff;border-color:#fff;}
+  .nav-btn.nav-x:hover{background:#fff;color:#000;}
+  .nav-btn.nav-token{color:var(--gold);border-color:var(--gold);}
+  .nav-btn.nav-token:hover{background:var(--gold);color:#000;box-shadow:0 0 18px rgba(251,191,36,0.45);}
+
+  .mint-progress{
+    position:fixed;top:64px;left:50%;transform:translateX(-50%);
+    min-width:360px;max-width:90vw;
+    background:var(--surface-2);border:1px solid var(--gold);
+    box-shadow:0 0 30px rgba(251,191,36,0.35);
+    z-index:25;padding:11px 14px;
+  }
+  .mint-progress-head{display:flex;align-items:center;gap:10px;font-family:var(--pixel);font-size:9px;letter-spacing:1px;}
+  .mint-progress-head .dot{
+    width:8px;height:8px;border-radius:50%;background:var(--gold);
+    box-shadow:0 0 10px var(--gold);animation:pulse 1.2s ease-in-out infinite;
+  }
+  .mint-progress-head .label{color:var(--gold);}
+  .mint-progress-head .name{flex:1;color:var(--text);font-family:var(--mono);font-size:11px;letter-spacing:0;}
+  .mint-progress-head .close{font-size:11px;color:var(--text-muted);background:none;border:none;cursor:pointer;}
+  .mint-progress .bar{height:5px;margin-top:9px;background:rgba(255,255,255,0.07);border:1px solid var(--border);overflow:hidden;}
+  .mint-progress .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--gold),var(--accent));transition:width 0.4s ease;}
+  .mint-progress .status{margin-top:6px;font-family:var(--pixel);font-size:8px;letter-spacing:0.8px;color:var(--text-dim);}
+
+  .wallet-wrap{display:flex;align-items:center;gap:8px;}
+  .api-status{
+    display:flex;align-items:center;gap:6px;
+    font-family:var(--pixel);font-size:8px;letter-spacing:0.8px;
+    padding:6px 10px;border:1px solid var(--border);background:var(--surface);
+    color:var(--text-dim);
+  }
+  .api-status .dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted);}
+  .api-status.online .dot{background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  .api-status.offline .dot{background:var(--gold);box-shadow:0 0 8px var(--gold);}
+  .api-status.online{color:var(--accent);}
+  .api-status.offline{color:var(--gold);}
+
+  .wallet{
+    display:flex;align-items:center;gap:9px;
+    font-family:var(--mono);font-size:10px;
+    padding:7px 12px;border:1px solid var(--border);background:var(--surface);
+  }
+  .wallet .dot{width:6px;height:6px;background:var(--accent);border-radius:50%;box-shadow:0 0 8px var(--accent);}
+  .wallet .addr{color:var(--text);}
+  .wallet .bal{color:var(--gold);font-weight:700;}
+
+  /* HUD */
+  #hud{position:absolute;inset:54px 0 60px 0;z-index:3;pointer-events:none;}
+  .hud-panel{pointer-events:auto;background:var(--surface);border:1px solid var(--border);backdrop-filter:blur(10px);}
+
+  #stats{position:absolute;top:16px;left:16px;width:230px;padding:12px 14px;}
+  .stats-title{font-family:var(--pixel);font-size:9px;letter-spacing:1.5px;color:var(--accent);margin-bottom:8px;}
+  .stat-row{display:flex;justify-content:space-between;font-size:10px;padding:4px 0;border-top:1px dashed rgba(255,255,255,0.07);}
+  .stat-row:first-of-type{border-top:none;}
+  .stat-row .k{color:var(--text-dim);}
+  .stat-row .v{color:var(--text);font-weight:500;}
+  .stat-row .v.acc{color:var(--accent);}
+  .stat-row .v.gold{color:var(--gold);}
+
+  #legend{position:absolute;top:222px;left:16px;width:230px;padding:12px 14px;}
+  .legend-row{display:flex;align-items:center;gap:9px;font-size:10px;padding:3px 0;}
+  .legend-chip{width:13px;height:13px;border:1px solid rgba(255,255,255,0.2);image-rendering:pixelated;}
+  .legend-row .count{color:var(--text-muted);margin-left:auto;font-size:9px;font-family:var(--pixel);}
+
+  #peers{position:absolute;top:16px;right:16px;width:248px;padding:12px 14px;}
+  .peer-row{display:flex;align-items:center;gap:9px;font-size:10px;padding:5px 0;border-top:1px dashed rgba(255,255,255,0.07);}
+  .peer-row:first-of-type{border-top:none;}
+  .peer-row .pulse{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 1.8s ease-in-out infinite;flex-shrink:0;}
+  .peer-row .pulse.unreach{background:var(--danger);box-shadow:0 0 8px var(--danger);animation:none;opacity:0.6;}
+  .peer-row .pulse.warn{background:var(--gold);box-shadow:0 0 8px var(--gold);}
+  .peer-info{flex:1;min-width:0;}
+  .peer-did{color:var(--text);font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .peer-meta{color:var(--text-muted);font-size:8px;}
+
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(0.85);}}
+
+  #compass{
+    position:absolute;bottom:16px;right:16px;width:120px;height:120px;
+    border-radius:50%;
+    background:radial-gradient(circle at center, rgba(0,245,212,0.08), rgba(0,0,0,0.6) 70%);
+    border:1px solid var(--border-strong);
+    pointer-events:auto;display:grid;place-items:center;
+    box-shadow:inset 0 0 20px rgba(0,245,212,0.1);
+  }
+  .compass-needle{position:absolute;width:2px;height:46px;background:linear-gradient(180deg, var(--accent-2) 0%, transparent 100%);transform-origin:bottom center;bottom:50%;box-shadow:0 0 6px var(--accent-2);}
+  .compass-label{font-family:var(--pixel);font-size:8px;color:var(--accent);position:absolute;}
+  .compass-label.n{top:5px;}
+  .compass-label.s{bottom:5px;}
+  .compass-label.e{right:7px;top:50%;transform:translateY(-50%);}
+  .compass-label.w{left:7px;top:50%;transform:translateY(-50%);}
+  .compass-center{font-family:var(--pixel);font-size:9px;color:var(--text-dim);text-align:center;line-height:1.3;}
+
+  #hint{
+    position:absolute;bottom:16px;left:16px;
+    font-size:9px;color:var(--text-muted);
+    background:var(--surface);border:1px solid var(--border);
+    padding:7px 11px;pointer-events:auto;
+    font-family:var(--pixel);letter-spacing:0.5px;
+  }
+  #hint kbd{display:inline-block;padding:1px 4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);font-size:8px;color:var(--accent);margin:0 2px;}
+
+  /* ============ DOCK (compact) ============ */
+  #dock{
+    position:absolute;bottom:0;left:0;right:0;z-index:5;
+    display:flex;justify-content:center;align-items:center;gap:6px;
+    padding:8px 14px;
+    background:linear-gradient(0deg, rgba(6,9,18,0.95), rgba(6,9,18,0.6));
+    border-top:1px solid var(--border);
+    backdrop-filter:blur(8px);
+  }
+  .dock-btn{
+    position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:5px 9px;min-width:58px;height:42px;
+    border:1px solid var(--border);background:var(--surface);
+    transition:all 0.15s ease;
+  }
+  .dock-btn:hover{border-color:var(--border-strong);background:var(--surface-2);transform:translateY(-2px);}
+  .dock-btn .icon{font-size:14px;line-height:1;}
+  .dock-btn .label{font-family:var(--pixel);font-size:7px;letter-spacing:0.4px;color:var(--text-dim);text-transform:uppercase;}
+  .dock-btn:hover .label{color:var(--accent);}
+  .dock-btn.locked .icon{filter:grayscale(0.5);opacity:0.7;}
+  .dock-btn .lock{position:absolute;top:2px;right:3px;font-size:7px;color:var(--gold);}
+  .dock-btn.locked:hover{border-color:rgba(255,190,11,0.4);}
+  .dock-btn.locked:hover .label{color:var(--gold);}
+
+  /* PROFILE PANEL */
+  #profile{
+    position:absolute;top:50%;right:-460px;transform:translateY(-50%);
+    width:420px;max-height:85vh;overflow-y:auto;z-index:8;
+    background:var(--surface-2);border:1px solid var(--border-strong);
+    backdrop-filter:blur(16px);
+    box-shadow:-8px 0 40px rgba(0,0,0,0.5), 0 0 60px rgba(0,245,212,0.15);
+    transition:right 0.35s cubic-bezier(0.16,1,0.3,1);
+    pointer-events:auto;
+  }
+  #profile.open{right:16px;}
+  #profile::-webkit-scrollbar{width:6px;}
+  #profile::-webkit-scrollbar-thumb{background:var(--border-strong);}
+  .profile-head{display:flex;justify-content:space-between;align-items:flex-start;padding:13px 16px;border-bottom:1px solid var(--border);}
+  .profile-head .net{font-family:var(--pixel);font-size:8px;color:var(--text-muted);letter-spacing:1px;}
+  .profile-head .close{font-family:var(--pixel);font-size:9px;padding:4px 7px;border:1px solid var(--border);color:var(--text-dim);transition:all 0.15s;}
+  .profile-head .close:hover{color:var(--danger);border-color:var(--danger);}
+
+  .profile-id{padding:16px;display:flex;gap:12px;align-items:center;}
+  .profile-avatar{
+    width:56px;height:56px;flex-shrink:0;display:grid;place-items:center;
+    font-family:var(--pixel);font-size:22px;image-rendering:pixelated;position:relative;
+  }
+  .profile-avatar::before{content:"";position:absolute;inset:3px;border:1px solid rgba(0,0,0,0.4);}
+  .profile-title h2{font-family:var(--pixel);font-size:13px;letter-spacing:0.5px;line-height:1.3;margin-bottom:4px;word-break:break-all;}
+  .profile-owner{font-size:10px;color:var(--text-dim);}
+  .profile-owner a{color:var(--accent);}
+  .profile-status{
+    display:inline-flex;align-items:center;gap:4px;
+    font-family:var(--pixel);font-size:7px;letter-spacing:1px;
+    padding:3px 6px;margin-top:6px;
+    background:rgba(0,245,212,0.1);border:1px solid var(--border-strong);color:var(--accent);
+  }
+  .profile-status.minted{background:rgba(251,191,36,0.1);border-color:rgba(251,191,36,0.5);color:var(--gold);}
+
+  .profile-desc{padding:0 16px 14px 16px;font-size:11px;line-height:1.55;color:var(--text-dim);}
+  .profile-desc strong{color:var(--text);}
+
+  .profile-attrs{padding:13px 16px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+  .attr{display:flex;flex-direction:column;gap:2px;}
+  .attr .k{font-family:var(--pixel);font-size:7px;color:var(--text-muted);letter-spacing:1px;}
+  .attr .v{font-size:11px;color:var(--text);font-weight:500;}
+  .attr .v.rarity{font-family:var(--pixel);font-size:9px;letter-spacing:0.5px;}
+
+  .profile-meta{display:flex;justify-content:space-between;padding:11px 16px;font-size:10px;color:var(--text-dim);border-bottom:1px solid var(--border);}
+  .profile-meta .stars{color:var(--gold);}
+  .profile-meta .visits{color:var(--accent);}
+
+  .profile-mint{padding:16px;}
+  .btn-mint{
+    width:100%;padding:13px;display:flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--accent);color:#001110;
+    font-family:var(--pixel);font-size:11px;letter-spacing:1.5px;
+    border:2px solid var(--accent);transition:all 0.15s;
+    box-shadow:0 0 20px rgba(0,245,212,0.3);
+  }
+  .btn-mint:hover{background:#00ffe5;box-shadow:0 0 30px rgba(0,245,212,0.5);}
+  .btn-mint.owned{background:rgba(251,191,36,0.1);color:var(--gold);border-color:var(--gold);box-shadow:0 0 20px rgba(251,191,36,0.2);}
+  .btn-visit{
+    width:100%;padding:10px;margin-top:8px;
+    background:transparent;color:var(--text);
+    font-family:var(--pixel);font-size:9px;letter-spacing:1px;
+    border:1px solid var(--border);transition:all 0.15s;
+  }
+  .btn-visit:hover{border-color:var(--border-strong);color:var(--accent);}
+
+  .profile-actions{padding:13px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .act-btn{padding:9px;display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid var(--border);background:rgba(15,20,35,0.5);transition:all 0.15s;position:relative;}
+  .act-btn:hover{border-color:var(--border-strong);background:var(--surface);}
+  .act-btn .icon{font-size:13px;}
+  .act-btn .label{font-family:var(--pixel);font-size:7px;color:var(--text-dim);letter-spacing:0.5px;}
+  .act-btn .lock-tag{position:absolute;top:3px;right:4px;font-size:7px;color:var(--gold);}
+  .act-btn.locked{opacity:0.7;}
+
+  /* MODALS */
+  .modal-backdrop{position:fixed;inset:0;z-index:20;background:rgba(6,9,18,0.85);display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px);padding:20px;}
+  .modal-backdrop.open{display:flex;}
+  .modal{background:var(--surface-2);border:1px solid var(--border-strong);max-width:520px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 0 60px rgba(0,245,212,0.2);}
+  .modal.wide{max-width:760px;}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border);}
+  .modal-title{font-family:var(--pixel);font-size:13px;letter-spacing:1px;color:var(--accent);}
+  .modal-close{font-family:var(--pixel);font-size:9px;padding:4px 7px;border:1px solid var(--border);color:var(--text-dim);}
+  .modal-close:hover{color:var(--danger);border-color:var(--danger);}
+  .modal-body{padding:16px;}
+  .modal-body p{font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:10px;}
+  .modal-body .lead{font-size:12px;color:var(--text);margin-bottom:12px;}
+  .modal-body ul{list-style:none;margin:8px 0;}
+  .modal-body li{font-size:10px;color:var(--text-dim);padding:5px 0;border-top:1px dashed rgba(255,255,255,0.06);display:flex;gap:8px;}
+  .modal-body li::before{content:"◆";color:var(--accent);}
+  .modal-body li:first-of-type{border-top:none;}
+  .coming-tag{display:inline-block;font-family:var(--pixel);font-size:8px;letter-spacing:1px;padding:3px 6px;background:rgba(251,191,36,0.12);color:var(--gold);border:1px solid rgba(251,191,36,0.4);margin-bottom:12px;}
+
+  .lb-table{width:100%;border-collapse:collapse;font-size:10px;}
+  .lb-table th{font-family:var(--pixel);font-size:8px;letter-spacing:1px;color:var(--text-muted);text-align:left;padding:7px 5px;border-bottom:1px solid var(--border);}
+  .lb-table td{padding:6px 5px;border-bottom:1px dashed rgba(255,255,255,0.05);}
+  .lb-table tr:hover td{background:rgba(0,245,212,0.04);}
+  .lb-rank{font-family:var(--pixel);color:var(--gold);}
+  .lb-rank.r1{color:#ffd700;}.lb-rank.r2{color:#c0c0c0;}.lb-rank.r3{color:#cd7f32;}
+  .lb-name{color:var(--text);font-weight:500;}
+  .lb-rarity{font-family:var(--pixel);font-size:8px;letter-spacing:0.5px;}
+
+  .upgrade-card{padding:14px;border:1px solid var(--border);background:rgba(15,20,35,0.5);margin-bottom:10px;}
+  .upgrade-card h3{font-family:var(--pixel);font-size:11px;color:var(--accent);margin-bottom:5px;}
+  .upgrade-card .lvl-bar{display:flex;gap:3px;margin:7px 0;}
+  .lvl-cell{flex:1;height:7px;background:rgba(255,255,255,0.06);border:1px solid var(--border);}
+  .lvl-cell.filled{background:var(--accent);box-shadow:0 0 6px var(--accent);}
+  .upgrade-cost{display:flex;justify-content:space-between;align-items:center;margin-top:9px;}
+  .upgrade-cost .cost{font-size:11px;}
+  .upgrade-cost .cost b{color:var(--gold);}
+  .btn-upgrade{padding:7px 12px;font-family:var(--pixel);font-size:9px;letter-spacing:1px;background:var(--accent);color:#001110;border:1px solid var(--accent);}
+  .btn-upgrade:hover{background:#00ffe5;}
+  .btn-upgrade:disabled{background:rgba(255,255,255,0.06);color:var(--text-muted);border-color:var(--border);cursor:not-allowed;box-shadow:none;}
+  .empty-state{padding:40px 20px;text-align:center;color:var(--text-muted);font-family:var(--pixel);font-size:10px;letter-spacing:1px;line-height:1.8;}
+
+  /* DISCOVER MODAL */
+  .discover-toolbar{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+  #discSearch{
+    width:100%;padding:9px 11px;background:rgba(10,15,30,0.8);color:var(--text);
+    border:1px solid var(--border);font-family:var(--mono);font-size:11px;
+    outline:none;transition:border-color 0.15s;
+  }
+  #discSearch:focus{border-color:var(--border-strong);}
+  #discSearch::placeholder{color:var(--text-muted);}
+  .discover-filters{display:flex;flex-wrap:wrap;gap:5px;}
+  .disc-filter{
+    --c:var(--accent);
+    font-family:var(--pixel);font-size:8px;letter-spacing:0.8px;
+    padding:5px 8px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text-dim);
+    transition:all 0.15s;
+  }
+  .disc-filter:hover{color:var(--c);border-color:var(--c);}
+  .disc-filter.active{color:#001110;background:var(--c);border-color:var(--c);}
+  .discover-meta{font-family:var(--pixel);font-size:8px;letter-spacing:0.8px;color:var(--text-dim);}
+  .discover-list{
+    max-height:52vh;overflow-y:auto;
+    border:1px solid var(--border);background:rgba(10,15,30,0.5);
+  }
+  .discover-list::-webkit-scrollbar{width:6px;}
+  .discover-list::-webkit-scrollbar-thumb{background:var(--border-strong);}
+  .disc-row{
+    display:grid;grid-template-columns:auto auto 1fr auto auto;gap:10px;align-items:center;
+    padding:6px 11px;font-size:11px;
+    border-bottom:1px dashed rgba(255,255,255,0.05);
+    cursor:pointer;transition:background 0.12s;
+  }
+  .disc-row:hover{background:rgba(0,245,212,0.06);}
+  .disc-rarity-chip{width:9px;height:9px;border:1px solid rgba(255,255,255,0.18);image-rendering:pixelated;}
+  .disc-thumb{
+    width:32px;height:32px;flex-shrink:0;
+    background:linear-gradient(135deg, rgba(0,245,212,0.05), rgba(251,191,36,0.03));
+    border:1px solid var(--border);image-rendering:pixelated;display:block;
+  }
+  .disc-thumb-empty{display:grid;place-items:center;font-family:var(--pixel);font-size:7px;color:var(--text-muted);}
+  .disc-name{color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .disc-name .did{color:var(--text-muted);font-size:9px;margin-left:6px;}
+  .disc-size{font-family:var(--pixel);font-size:8px;color:var(--text-dim);letter-spacing:0.5px;white-space:nowrap;}
+  .disc-status{
+    font-family:var(--pixel);font-size:7px;letter-spacing:1px;padding:2px 5px;
+    border:1px solid var(--border);color:var(--text-muted);
+  }
+  .disc-status.minted{color:var(--gold);border-color:rgba(251,191,36,0.5);background:rgba(251,191,36,0.08);}
+  .disc-status.available{color:var(--accent);border-color:var(--border-strong);background:rgba(0,245,212,0.05);}
+  .disc-empty{padding:30px 20px;text-align:center;color:var(--text-muted);font-family:var(--pixel);font-size:10px;}
+
+  /* NFT ART PREVIEW in profile panel */
+  .profile-art{padding:0 16px 14px;}
+  .profile-art-frame{
+    position:relative;width:100%;aspect-ratio:1/1;
+    background:linear-gradient(135deg, rgba(0,245,212,0.08), rgba(251,191,36,0.04));
+    border:1px solid var(--border-strong);overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .profile-art-frame img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated;}
+  .profile-art-placeholder{
+    font-family:var(--pixel);font-size:9px;letter-spacing:1.5px;color:var(--text-muted);
+    text-align:center;padding:18px;line-height:1.8;
+  }
+  .profile-art-loading{font-family:var(--pixel);font-size:9px;color:var(--accent);}
+  .profile-art-loading::after{content:" ◇";animation:pulse 1.4s infinite;}
+  .btn-gen-art{
+    width:100%;padding:9px;margin-top:8px;
+    background:rgba(192,132,252,0.08);color:#d8b4fe;
+    font-family:var(--pixel);font-size:9px;letter-spacing:1px;
+    border:1px solid rgba(192,132,252,0.4);transition:all 0.15s;
+  }
+  .btn-gen-art:hover{background:rgba(192,132,252,0.18);box-shadow:0 0 16px rgba(192,132,252,0.25);}
+  .btn-gen-art:disabled{opacity:0.5;cursor:not-allowed;}
+
+  #arcade-canvas{display:block;background:#020409;width:100%;height:340px;image-rendering:pixelated;border:1px solid var(--border);}
+  .arcade-info{display:flex;justify-content:space-between;margin-top:10px;font-family:var(--pixel);font-size:9px;letter-spacing:1px;}
+  .arcade-info span{color:var(--accent);}
+
+  .wallet-head{display:flex;align-items:center;gap:16px;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:14px;}
+  .wallet-avatar{
+    position:relative;width:80px;height:80px;flex-shrink:0;cursor:pointer;
+    border:2px solid var(--border-strong);background:#0a0e1a;
+    display:grid;place-items:center;overflow:hidden;
+  }
+  .wallet-avatar img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated;}
+  .wallet-avatar:hover{border-color:var(--accent);box-shadow:0 0 18px rgba(0,245,212,0.35);}
+  .wallet-avatar::after{
+    content:"✎ change";position:absolute;inset:auto 0 0 0;height:18px;
+    background:rgba(0,0,0,0.7);color:var(--accent);font-family:var(--pixel);font-size:7px;
+    letter-spacing:1px;display:grid;place-items:center;opacity:0;transition:opacity 0.15s;
+  }
+  .wallet-avatar:hover::after{opacity:1;}
+  .wallet-id{flex:1;min-width:0;}
+  .wallet-username{display:flex;align-items:center;gap:6px;}
+  .wallet-username input{
+    flex:1;background:transparent;border:none;outline:none;
+    font-family:var(--pixel);font-size:14px;letter-spacing:1px;color:var(--text);
+    padding:4px 0;border-bottom:1px dashed transparent;
+  }
+  .wallet-username input:focus{border-bottom-color:var(--accent);}
+  .btn-save{
+    font-family:var(--pixel);font-size:9px;letter-spacing:1px;
+    padding:5px 9px;border:1px solid var(--accent);color:var(--accent);
+    background:transparent;transition:all 0.15s;cursor:pointer;
+  }
+  .btn-save:hover{background:var(--accent);color:#001110;}
+  .wallet-addr-full{
+    margin-top:5px;font-family:var(--mono);font-size:10px;color:var(--text-muted);
+    cursor:pointer;word-break:break-all;
+  }
+  .wallet-addr-full:hover{color:var(--accent);}
+  .wallet-balances{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;
+  }
+  .bal-card{
+    padding:11px 13px;background:rgba(15,20,35,0.6);border:1px solid var(--border);
+  }
+  .bal-k{font-family:var(--pixel);font-size:7px;letter-spacing:1.5px;color:var(--text-muted);}
+  .bal-v{font-family:var(--pixel);font-size:14px;letter-spacing:0.6px;margin-top:5px;}
+  .wallet-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .wallet-actions .btn-secondary{
+    flex:1;min-width:0;padding:9px 11px;text-align:center;text-decoration:none;
+    font-family:var(--pixel);font-size:8px;letter-spacing:1px;
+    border:1px solid var(--border);color:var(--text);transition:all 0.15s;
+  }
+  .wallet-actions .btn-secondary:hover{border-color:var(--border-strong);color:var(--accent);}
+  .wallet-section-title{font-family:var(--pixel);font-size:8px;letter-spacing:1.5px;color:var(--accent);margin-bottom:8px;}
+  .wallet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;}
+  .nft-card{
+    text-decoration:none;color:inherit;display:flex;flex-direction:column;
+    background:rgba(10,15,30,0.5);border:1px solid var(--border);transition:transform 0.15s, border-color 0.15s;
+  }
+  .nft-card:hover{transform:translateY(-2px);}
+  .nft-art{aspect-ratio:1/1;background:#0a0e1a;overflow:hidden;}
+  .nft-art img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated;}
+  .nft-meta{padding:6px 8px;}
+  .nft-name{font-size:10px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .nft-row{display:flex;justify-content:space-between;font-family:var(--pixel);font-size:7px;letter-spacing:0.5px;margin-top:3px;}
+  .nft-level-bar{display:flex;gap:2px;margin-top:4px;}
+  .nft-cell{flex:1;height:4px;background:rgba(255,255,255,0.07);border:1px solid var(--border);}
+  .nft-cell.filled{background:var(--gold);box-shadow:0 0 3px var(--gold);}
+  .nft-upgrade{
+    margin:0 8px 8px;padding:6px;font-family:var(--pixel);font-size:7px;letter-spacing:1px;
+    background:rgba(192,132,252,0.12);color:#d8b4fe;border:1px solid rgba(192,132,252,0.5);
+    cursor:pointer;transition:all 0.15s;
+  }
+  .nft-upgrade:hover:not(:disabled){background:rgba(192,132,252,0.25);box-shadow:0 0 12px rgba(192,132,252,0.4);}
+  .nft-upgrade:disabled{opacity:0.45;cursor:not-allowed;background:rgba(255,255,255,0.04);color:var(--text-muted);border-color:var(--border);}
+
+  #toast{
+    position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--surface-2);border:1px solid var(--accent);
+    padding:11px 18px;font-family:var(--pixel);font-size:10px;letter-spacing:1px;
+    box-shadow:0 0 30px rgba(0,245,212,0.4);opacity:0;pointer-events:none;
+    transition:opacity 0.3s, transform 0.3s;z-index:30;color:var(--accent);
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  #toast.error{border-color:var(--danger);color:var(--danger);box-shadow:0 0 30px rgba(255,59,59,0.4);}
+  #toast.gold{border-color:var(--gold);color:var(--gold);box-shadow:0 0 30px rgba(251,191,36,0.4);}
+
+  #loading{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg-0);}
+  #loading.done{opacity:0;pointer-events:none;transition:opacity 0.5s ease 0.2s;}
+  .loader-inner{text-align:center;}
+  .loader-logo{font-family:var(--pixel);font-size:30px;letter-spacing:4px;color:var(--accent);margin-bottom:18px;text-shadow:0 0 20px rgba(0,245,212,0.6);}
+  .loader-logo span{color:var(--text);}
+  .loader-bar{width:260px;height:6px;background:rgba(255,255,255,0.06);border:1px solid var(--border);margin:0 auto 10px;overflow:hidden;}
+  .loader-fill{height:100%;width:0%;background:var(--accent);box-shadow:0 0 10px var(--accent);transition:width 0.2s ease;}
+  .loader-text{font-family:var(--pixel);font-size:9px;letter-spacing:2px;color:var(--text-muted);}
+
+  @media (max-width:1100px){
+    #stats,#legend{width:200px;}
+    #legend{top:220px;}
+    #peers{width:220px;}
+    #profile{width:90vw;max-width:420px;}
+  }
+  @media (max-width:760px){
+    #stats,#legend,#peers,#compass,#hint{display:none;}
+    #topbar{padding:8px 10px;}
+    .brand-name{font-size:13px;}
+    .nav-btn{padding:5px 8px;font-size:8px;}
+    .wallet{font-size:9px;padding:5px 9px;}
+    .api-status{display:none;}
+    #dock{gap:4px;padding:6px 6px;overflow-x:auto;}
+    .dock-btn{min-width:50px;padding:4px 6px;height:36px;}
+    .dock-btn .label{font-size:6px;}
+    .dock-btn .icon{font-size:11px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="loader-inner">
+    <div class="loader-logo">LAWB<span>WORLD</span></div>
+    <div class="loader-bar"><div class="loader-fill" id="loaderFill"></div></div>
+    <div class="loader-text" id="loaderText">SYNCING GITLAWB NODE…</div>
+  </div>
+</div>
+
+<div id="app">
+
+  <header id="topbar">
+    <div class="brand">
+      <img class="brand-mark" src="/assets/logo.jpg" alt="Lawbworld logo" />
+      <div>
+        <div class="brand-name">LAWB<span>WORLD</span></div>
+        <div class="brand-meta">
+          <span>where repos build cities</span>
+          <span><b>v0.2.0</b> · alpha · gitlawb-sync</span>
+        </div>
+      </div>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active">city</button>
+      <a class="nav-btn" href="/discover">discover</a>
+      <button class="nav-btn" data-modal="leaderboard-modal">leaderboard</button>
+      <button class="nav-btn" id="navArcade">arcade <span style="opacity:0.6;font-size:7px;">soon</span></button>
+      <button class="nav-btn" data-modal="stake-modal">stake</button>
+      <button class="nav-btn" id="navProfile">profile</button>
+      <button class="nav-btn" data-modal="docs-modal">docs</button>
+      <a class="nav-btn nav-x"     href="https://x.com/lawbworld" target="_blank" rel="noopener" title="follow on X">𝕏</a>
+      <a class="nav-btn nav-token" href="https://bankr.bot"       target="_blank" rel="noopener" title="buy $LAWBWORLD on bankr">$LAWBWORLD</a>
+    </nav>
+    <div class="wallet-wrap">
+      <div class="api-status offline" id="apiStatus">
+        <span class="dot"></span>
+        <span id="apiStatusText">LOCAL</span>
+      </div>
+      <button class="nav-btn" id="btnConnect" style="border-color:var(--accent);color:var(--accent);">CONNECT</button>
+      <div class="wallet" id="walletChip" style="cursor:pointer;">
+        <span class="dot"></span>
+        <span class="addr" id="walletAddr">—</span>
+        <span class="bal" id="walletBal">0 $LAWBWORLD</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="mintProgress" class="mint-progress" hidden>
+    <div class="mint-progress-head">
+      <span class="dot"></span>
+      <span class="label">MINTING</span>
+      <span class="name" id="mintProgressName">—</span>
+      <button class="close" id="mintProgressClose">✕</button>
+    </div>
+    <div class="bar"><div class="fill" id="mintProgressFill"></div></div>
+    <div class="status" id="mintProgressStatus">▌ submitting transaction…</div>
+  </div>
+
+  <div id="hud">
+
+    <div class="hud-panel" id="stats">
+      <div class="stats-title">▌ NETWORK</div>
+      <div class="stat-row"><span class="k">node</span><span class="v acc">z6Mkic…HXoH</span></div>
+      <div class="stat-row"><span class="k">protocol</span><span class="v">git-smart-http</span></div>
+      <div class="stat-row"><span class="k">total repos</span><span class="v" id="statRepos">—</span></div>
+      <div class="stat-row"><span class="k">minted</span><span class="v gold" id="statMinted">0</span></div>
+      <div class="stat-row"><span class="k">peers</span><span class="v acc">1 / 4</span></div>
+      <div class="stat-row"><span class="k">block</span><span class="v" id="statBlock">#3a9fba3d</span></div>
+    </div>
+
+    <div class="hud-panel" id="legend">
+      <div class="stats-title">▌ RARITY</div>
+      <div class="legend-row"><span class="legend-chip" style="background:#5b6478"></span><span>Common</span><span class="count" id="cntCommon">—</span></div>
+      <div class="legend-row"><span class="legend-chip" style="background:#34d399"></span><span>Uncommon</span><span class="count" id="cntUncommon">—</span></div>
+      <div class="legend-row"><span class="legend-chip" style="background:#38bdf8"></span><span>Rare</span><span class="count" id="cntRare">100</span></div>
+      <div class="legend-row"><span class="legend-chip" style="background:#c084fc"></span><span>Epic</span><span class="count" id="cntEpic">50</span></div>
+      <div class="legend-row"><span class="legend-chip" style="background:#fbbf24"></span><span>Legendary</span><span class="count" id="cntLegendary">10</span></div>
+    </div>
+
+    <div class="hud-panel" id="peers">
+      <div class="stats-title">▌ TRANSMITTERS · P2P</div>
+      <div id="peerList"></div>
+    </div>
+
+    <div id="compass">
+      <div class="compass-label n">N</div>
+      <div class="compass-label s">S</div>
+      <div class="compass-label e">E</div>
+      <div class="compass-label w">W</div>
+      <div class="compass-needle" id="compassNeedle"></div>
+      <div class="compass-center">CITY<br>VIEW</div>
+    </div>
+
+    <div id="hint">
+      <kbd>DRAG</kbd> ORBIT · <kbd>WHEEL</kbd> ZOOM · <kbd>CLICK</kbd> INSPECT
+    </div>
+  </div>
+
+  <footer id="dock">
+    <button class="dock-btn" data-action="discover"><span class="icon">🏙️</span><span class="label">Discover</span></button>
+    <button class="dock-btn locked" data-action="stake"><span class="lock">🔒</span><span class="icon">⚡</span><span class="label">Stake</span></button>
+    <button class="dock-btn locked" data-action="gift"><span class="lock">🔒</span><span class="icon">🎁</span><span class="label">Gift</span></button>
+    <button class="dock-btn locked" data-action="battle"><span class="lock">🔒</span><span class="icon">⚔️</span><span class="label">Battle</span></button>
+    <button class="dock-btn locked" data-action="arcade"><span class="lock">🔒</span><span class="icon">🎮</span><span class="label">Arcade</span></button>
+    <button class="dock-btn" data-action="upgrade"><span class="icon">⬆️</span><span class="label">Upgrade</span></button>
+    <button class="dock-btn" data-action="leaderboard"><span class="icon">🏆</span><span class="label">Leaders</span></button>
+  </footer>
+
+  <div id="canvas-stage"></div>
+
+  <aside id="profile">
+    <div class="profile-head">
+      <div class="net">▌ NFT PROFILE · LAWBWORLD</div>
+      <button class="close" id="profileClose">ESC</button>
+    </div>
+    <div class="profile-id">
+      <div class="profile-avatar" id="profAvatar">L</div>
+      <div class="profile-title">
+        <h2 id="profName">REPO NAME</h2>
+        <div class="profile-owner">owned by <a id="profOwner" href="#" target="_blank">@anon</a></div>
+        <div class="profile-status" id="profStatus">▌ AVAILABLE</div>
+      </div>
+    </div>
+    <div class="profile-desc" id="profDesc"></div>
+    <div class="profile-attrs">
+      <div class="attr"><span class="k">LEVEL</span><span class="v" id="profLevel">1 / 10</span></div>
+      <div class="attr"><span class="k">RARITY RANK</span><span class="v rarity" id="profRarity">COMMON</span></div>
+      <div class="attr"><span class="k">FILE SIZE</span><span class="v" id="profSize">—</span></div>
+      <div class="attr"><span class="k">TOKEN ID</span><span class="v" id="profTokenId">#—</span></div>
+    </div>
+    <div class="profile-meta">
+      <span class="stars">★ <span id="profStars">0</span> stars</span>
+      <span class="visits">visited by <span id="profVisits">0</span></span>
+    </div>
+    <div class="profile-art">
+      <div class="profile-art-frame" id="profArtFrame">
+        <div class="profile-art-placeholder" id="profArtPlaceholder">
+          ▌ AI ART<br>GENERATED ON MINT<br><br>
+          <span style="color:var(--text-dim);font-size:8px;">LAWBWORLD COLLECTION</span>
+        </div>
+      </div>
+      <button class="btn-gen-art" id="btnGenArt">✨ GENERATE 3D PIXEL-ART</button>
+    </div>
+    <div class="profile-mint">
+      <button class="btn-mint" id="btnMint">▶ MINT — 0.00028 ETH</button>
+      <button class="btn-visit" id="btnVisitRepo">↗ VISIT REPO ON GITLAWB</button>
+    </div>
+    <div class="profile-actions">
+      <button class="act-btn" data-act="upgrade"><span class="icon">⬆️</span><span class="label">UPGRADE</span></button>
+      <button class="act-btn locked" data-act="stake"><span class="lock-tag">🔒</span><span class="icon">⚡</span><span class="label">STAKE</span></button>
+      <button class="act-btn locked" data-act="gift"><span class="lock-tag">🔒</span><span class="icon">🎁</span><span class="label">SEND GIFT</span></button>
+      <button class="act-btn locked" data-act="battle"><span class="lock-tag">🔒</span><span class="icon">⚔️</span><span class="label">BATTLE</span></button>
+    </div>
+  </aside>
+
+  <div id="toast"></div>
+
+  <div class="modal-backdrop" id="stake-modal">
+    <div class="modal">
+      <div class="modal-head"><div class="modal-title">⚡ STAKING</div><button class="modal-close" data-close>ESC</button></div>
+      <div class="modal-body">
+        <span class="coming-tag">▌ COMING SOON</span>
+        <p class="lead">Stake your minted Lawbworld buildings to earn passive <b style="color:var(--gold)">$LAWBWORLD</b> rewards.</p>
+        <p>Each rarity has a base APR. Every level you upgrade adds <b style="color:var(--accent)">+1% APR</b> on top — so a maxed Legendary (L10) earns <b style="color:var(--gold)">29% APR</b>.</p>
+        <ul>
+          <li>Common · <b style="color:var(--text)">5%</b> APR base → up to 14% at L10</li>
+          <li>Uncommon · <b style="color:var(--text)">7%</b> APR base → up to 16% at L10</li>
+          <li>Rare · <b style="color:var(--text)">10%</b> APR base → up to 19% at L10</li>
+          <li>Epic · <b style="color:var(--text)">15%</b> APR base → up to 24% at L10</li>
+          <li>Legendary · <b style="color:var(--gold)">20%</b> APR base → up to 29% at L10</li>
+        </ul>
+        <p style="margin-top:10px;">Staking pools deploy on Base L2 after the <code style="color:var(--accent);font-size:10px;">$LAWBWORLD</code> launch on Bankr.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="gift-modal">
+    <div class="modal">
+      <div class="modal-head"><div class="modal-title">🎁 SEND GIFT</div><button class="modal-close" data-close>ESC</button></div>
+      <div class="modal-body">
+        <span class="coming-tag">▌ COMING SOON</span>
+        <p class="lead">Send a minted building NFT, a $LAWBWORLD tip, or a decorative drop to any wallet on the network.</p>
+        <p>Gifts travel via the gitlawb p2p layer — encrypted with the recipient's DID. The recipient sees a chime on their building and can accept or reject the gift.</p>
+        <ul>
+          <li>Tip $LAWBWORLD to a repo owner</li>
+          <li>Transfer a duplicate-mint to a friend</li>
+          <li>Drop cosmetics (rooftop neon, holiday wreaths, aurora shaders)</li>
+          <li>Anonymous gifts via stealth address</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="battle-modal">
+    <div class="modal">
+      <div class="modal-head"><div class="modal-title">⚔️ BATTLE ARENA</div><button class="modal-close" data-close>ESC</button></div>
+      <div class="modal-body">
+        <span class="coming-tag">▌ COMING SOON</span>
+        <p class="lead">Pit your buildings against rival NFTs in turn-based combat. Stats are derived from the underlying repo.</p>
+        <ul>
+          <li><b style="color:var(--text)">HP</b> · derived from file size</li>
+          <li><b style="color:var(--text)">ATK</b> · derived from commit frequency</li>
+          <li><b style="color:var(--text)">DEF</b> · derived from peer mirror count</li>
+          <li><b style="color:var(--text)">SPD</b> · derived from last push freshness</li>
+        </ul>
+        <p style="margin-top:10px;">Winners earn $LAWBWORLD and rarity points. Losers' buildings flicker dim for an hour. Bring snacks.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="leaderboard-modal">
+    <div class="modal wide">
+      <div class="modal-head"><div class="modal-title">🏆 LEADERBOARD</div><button class="modal-close" data-close>ESC</button></div>
+      <div class="modal-body">
+        <p class="lead">Top buildings ranked by rarity score, level, and stars across the gitlawb network.</p>
+        <table class="lb-table" id="lbTable">
+          <thead><tr><th>RANK</th><th>BUILDING</th><th>OWNER</th><th>RARITY</th><th>LVL</th><th>★</th><th>SIZE</th></tr></thead>
+          <tbody id="lbBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="upgrade-modal">
+    <div class="modal">
+      <div class="modal-head"><div class="modal-title">⬆️ UPGRADE NFT</div><button class="modal-close" data-close>ESC</button></div>
+      <div class="modal-body" id="upgradeBody"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="arcade-modal">
+    <div class="modal wide">
+      <div class="modal-head"><div class="modal-title">🎮 ARCADE · CITY DASH</div><button class="modal-close" data-close>ESC</button></div>
+      <div class="modal-body">
+        <p class="lead">Pilot the LAWB cursor through the skyline. Catch <b style="color:var(--gold)">$LAWBWORLD</b> drops, dodge red glitches. High score earns leaderboard cred.</p>
+        <canvas id="arcade-canvas" width="720" height="340"></canvas>
+        <div class="arcade-info">
+          <span>SCORE: <span id="arcScore">0</span></span>
+          <span>BEST: <span id="arcBest">0</span></span>
+          <span>$LAWBWORLD +<span id="arcReward">0</span></span>
+        </div>
+        <p style="margin-top:10px;font-size:11px;">Use <b style="color:var(--accent)">←→</b> or <b style="color:var(--accent)">A/D</b> to steer. Press <b style="color:var(--accent)">SPACE</b> to start / restart.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="discover-modal">
+    <div class="modal wide">
+      <div class="modal-head">
+        <div class="modal-title">🏙️ DISCOVER · CITY MAP</div>
+        <button class="modal-close" data-close>ESC</button>
+      </div>
+      <div class="modal-body">
+        <p class="lead">All <b id="discTotalRepos" style="color:var(--accent)">—</b> repositories hosted on this gitlawb node, rendered as buildings in the Lawbworld voxel city. Pick one to fly the camera to it.</p>
+        <div class="discover-toolbar">
+          <input id="discSearch" type="search" placeholder="search repos / DIDs…" autocomplete="off" />
+          <div class="discover-filters">
+            <button class="disc-filter active" data-tier="all">ALL</button>
+            <button class="disc-filter" data-tier="4" style="--c:#fbbf24">LEGENDARY</button>
+            <button class="disc-filter" data-tier="3" style="--c:#c084fc">EPIC</button>
+            <button class="disc-filter" data-tier="2" style="--c:#38bdf8">RARE</button>
+            <button class="disc-filter" data-tier="1" style="--c:#34d399">UNCOMMON</button>
+            <button class="disc-filter" data-tier="0" style="--c:#5b6478">COMMON</button>
+            <button class="disc-filter" data-tier="minted" style="--c:#ffbe0b">MINTED</button>
+            <button class="disc-filter" data-tier="available" style="--c:#00f5d4">AVAILABLE</button>
+          </div>
+          <div class="discover-meta">
+            <span id="discCount">0</span> shown ·
+            <span id="discSource" style="color:var(--text-muted);">source: —</span>
+          </div>
+        </div>
+        <div id="discoverList" class="discover-list"></div>
+        <p style="margin-top:10px;font-size:10px;color:var(--text-muted);">⚠ <code style="color:var(--gold);font-size:10px;">.env</code>, <code style="color:var(--gold);font-size:10px;">secrets</code>, <code style="color:var(--gold);font-size:10px;">credentials</code>, key files, and other dangerous repo names are filtered out at the server.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="docs-modal">
+    <div class="modal">
+      <div class="modal-head"><div class="modal-title">▌ ABOUT LAWBWORLD</div><button class="modal-close" data-close>ESC</button></div>
+      <div class="modal-body">
+        <p class="lead">Lawbworld is a 3D pixel-art city built from live repositories on the <b style="color:var(--accent)">gitlawb</b> decentralized git network. Every repo becomes a building — its size, height, and rarity derived from on-chain file weight.</p>
+        <p><b style="color:var(--text)">How it works:</b></p>
+        <ul>
+          <li>The city syncs from <code style="color:var(--accent);font-size:10px;">gitlawb.com/node</code> on load — every repo placed into a procedurally generated voxel skyline.</li>
+          <li>Building height · log of repo file size in bytes</li>
+          <li>Building width · derived from commit count + branch count</li>
+          <li>Window glow pattern · derived from the DID public key hash</li>
+          <li>Rarity tier · 10 Legendary, 50 Epic, 100 Rare, rest Common / Uncommon</li>
+          <li>Transmitter towers at city edges represent <b>p2p peers</b></li>
+        </ul>
+        <p style="margin-top:10px;"><b style="color:var(--text)">Architecture:</b> Frontend (this HTML) · Backend (Express REST API at <code style="color:var(--accent);font-size:10px;">/api</code>, full live gitlawb sync) · UUPS-upgradeable <code style="color:var(--accent);font-size:10px;">LawbBuilding</code> ERC-721 on Base L2. Mint = <b style="color:var(--text)">0.00028 ETH</b>. Upgrade = burn <b style="color:var(--gold)">$LAWBWORLD</b>, deployed via the <b style="color:var(--accent)">Bankr</b> launchpad.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script src="/wallet.js"></script>
+
+<script>
+/* ============================================================
+   LAWBWORLD — Voxel City Renderer + Mint Logic
+   (frontend talks to optional backend at /api, falls back to local)
+   ============================================================ */
+
+const API_BASE = window.location.origin + "/api";
+let apiOnline = false;
+
+const REAL_REPOS = [
+  ["z6MkoS9e","honey-router","OpenAI-compatible router. Routes requests to multiple LLM providers via signed gitlawb capabilities."],
+  ["z6Mki9mn","mirror-test","Peer-mirror correctness test repo. Verifies smart-http round-trip across p2p replicas."],
+  ["z6Mki9mn","starfield","Starfield background renderer in pure WebGL. Tiny, fast, hypnotic."],
+  ["z6Mki9mn","pie-terminal-display","Terminal-based pie chart renderer with unicode shading."],
+  ["z6Mki9mn","moss-lang","Experimental scripting language. Lichen syntax over a forest of macros."],
+  ["z6Mki9mn","MiroFish","Collaborative whiteboard prototype with fish-school cursor swarms."],
+  ["z6Mkm4Cj","playground-neartoilets-v1vpco","Playground scratch repo."],
+  ["z6Mkm4Cj","playground-neartoilets-p007j7","Playground scratch repo, take 2."],
+  ["z6Mkm4Cj","playground-neartoilets-qn1p2a","Playground scratch repo, Q variant."],
+  ["z6Mkm4Cj","playground-neartoilets-qj8kdf","Playground scratch repo, KD branch."],
+  ["z6MkoK2n","playground-clawvatar-e5cfja","Clawvatar generator demo. Procedural pixel mascots."],
+  ["z6MkoK2n","playground-clawvatar-rwzj88","Clawvatar generator demo. Refined palette."],
+  ["z6Mki3uy","playground-gitlawb-xg21jm","Bootstrapping playground."],
+  ["z6Mki3uy","playground-gitlawb-xkepg3","Bootstrapping playground. Branch 2."],
+  ["z6MktKZe","e2e-test-repo","End-to-end test fixture. Verified across all peers."],
+  ["z6MksaAM","e2e-lifecycle","Lifecycle smoke tests for push/pull/mirror flows."],
+  ["z6MkgX7q","e2e-test-1773671871","Timestamped e2e fixture."],
+  ["z6Mkk9M8","e2e-full-test","Comprehensive full-stack e2e suite."],
+  ["z6MkmQpv","e2e-test-repo","E2E fixture mirror."],
+  ["z6Mkgz6C","e2e-1773755782","Another timestamped fixture."],
+  ["z6MksXZD","test-small","Minimal smoke test repo. ~3 commits."],
+  ["z6MksXZD","openclaw","Open framework for clawvatar-style content tooling."],
+  ["z6MksXZD","openclaw-v2","Openclaw v2 — full rewrite with stricter typing."],
+  ["z6MksXZD","openclaw-minimal","Minimal subset of openclaw for embedded targets."],
+  ["z6MkfRt1","playground-hermez042-qy0ife","Playground for the hermez042 user."],
+  ["z6MkwbuduC","nipmod","Reference NIP modifier set. Heavy push activity recently."],
+];
+
+const REPO_NAMES_EXTRA = [
+  "ucan-sdk","libp2p-helper","did-key-resolver","ipfs-pin-mirror","ref-update-fanout",
+  "smart-http-gateway","claw-engine","claw-engine-rust","claw-cli","claw-bench",
+  "deck-renderer","deck-renderer-wasm","void-tracer","void-tracer-gpu","void-shader-lib",
+  "blockwave","blockwave-relay","blockwave-vault","tide-protocol","tide-protocol-tests",
+  "lattice-os","lattice-os-kernel","lattice-os-shell","mossy-cli","mossy-runtime",
+  "kit-bench","kit-bench-ci","echo-mesh","echo-mesh-bridge","fog-of-war",
+  "fog-of-war-server","ghost-net","ghost-net-tracker","prism-loader","prism-loader-edge",
+  "tinyforge","tinyforge-templates","claw-renderer","claw-renderer-rs","claw-renderer-wgpu",
+  "neon-router","neon-relay","neon-payments","quietnet","quietnet-bridge",
+  "halftone","halftone-fonts","halftone-icons","aurora-runtime","aurora-edge-cache",
+  "wisp-orm","wisp-cli","wisp-migrations","ember-bench","ember-bench-charts",
+  "skylark-vm","skylark-jit","skylark-stdlib","mantis-cdn","mantis-cdn-edge",
+  "raven-mq","raven-mq-bridge","sparrow-tasks","sparrow-cron","kestrel-auth",
+  "kestrel-keys","heron-graphs","heron-query","ibis-orm","ibis-migrate",
+  "stork-deploy","stork-rollback","crane-build","crane-cache","crane-watch",
+  "egret-logs","egret-tail","egret-grep","plover-server","plover-tls",
+  "robin-state","robin-store","robin-effects","wren-css","wren-css-vars",
+  "finch-ui","finch-icons","finch-motion","thrush-tests","thrush-fixtures",
+  "lark-bench","lark-profile","loon-broker","loon-events","loon-replay",
+  "jaybird-types","jaybird-runtime","jaybird-cli","oriole-net","oriole-net-test",
+  "phoebe-pool","phoebe-pool-rs","phoebe-pool-go","tanager-cache","tanager-edge",
+  "vireo-cdn","vireo-dns","vireo-edge","warbler-graph","warbler-store",
+  "yellowthroat-fs","yellowthroat-tools","redstart-vm","redstart-bench","redstart-bin",
+  "bluebird-keys","bluebird-vault","cardinal-router","cardinal-edge","blackbird-pipe",
+  "blackbird-mux","mockingbird-mock","mockingbird-fake","nightjar-relay","nightjar-tls",
+  "owl-scheduler","owl-cron","peewee-test","peewee-runner","quail-data",
+  "quail-flow","raven-classic","raven-modern","sandpiper-sync","sandpiper-mesh",
+  "tit-utils","tit-format","towhee-config","towhee-env","veery-bench",
+  "veery-ci","verdin-shell","verdin-fish","vesper-tracer","vesper-flame",
+  "warbler-edge","waxwing-render","waxwing-stream","whippoorwill-cron","wood-warbler",
+  "woodpecker-watch","woodpecker-poll","yellowthroat-build","yellowthroat-deploy","zonotrichia-keys",
+];
+
+const DIDS_POOL = [
+  "z6MkA1qP","z6MkB7rH","z6MkC4vK","z6MkD9zL","z6MkE2pX","z6MkF8mY","z6MkG3kQ",
+  "z6MkH7nR","z6MkI5tS","z6MkJ4uT","z6MkK6wU","z6MkL1xV","z6MkM3yW","z6MkN9aZ",
+  "z6MkP2bC","z6MkQ5dE","z6MkR8fG","z6MkS3hI","z6MkT6jK","z6MkU9lM","z6MkV1nO",
+];
+
+function hashStr(s){
+  let h = 2166136261 >>> 0;
+  for(let i=0;i<s.length;i++){
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h >>> 0;
+}
+function rngFromSeed(seed){
+  let s = seed >>> 0;
+  return function(){
+    s ^= s << 13; s >>>= 0;
+    s ^= s >>> 17;
+    s ^= s << 5; s >>>= 0;
+    return (s >>> 0) / 4294967295;
+  };
+}
+
+const RARITY_TIERS = [
+  {name:"COMMON",   color:"#5b6478", glow:"#7c889c", tier:0, sizeMin: 1,     sizeMax: 49},
+  {name:"UNCOMMON", color:"#34d399", glow:"#86efac", tier:1, sizeMin: 50,    sizeMax: 199},
+  {name:"RARE",     color:"#38bdf8", glow:"#7dd3fc", tier:2, sizeMin: 200,   sizeMax: 499},
+  {name:"EPIC",     color:"#c084fc", glow:"#d8b4fe", tier:3, sizeMin: 500,   sizeMax: 1999},
+  {name:"LEGENDARY",color:"#fbbf24", glow:"#fde047", tier:4, sizeMin: 2000,  sizeMax: 80000},
+];
+
+const TARGET_DISTRIBUTION = [
+  {tier:4, count:10},
+  {tier:3, count:50},
+  {tier:2, count:100},
+  {tier:1, count:60},
+  {tier:0, count:30},
+];
+const TOTAL_REPOS = TARGET_DISTRIBUTION.reduce((a,b)=>a+b.count, 0);
+
+function buildRepoData(){
+
+  const pool = [];
+  REAL_REPOS.forEach(r => pool.push({did:r[0], name:r[1], desc:r[2], real:true}));
+  REPO_NAMES_EXTRA.forEach((n, i) => {
+    pool.push({did:DIDS_POOL[i % DIDS_POOL.length], name:n, desc:"Federated repository hosted on gitlawb p2p mirrors.", real:false});
+  });
+
+  let padIdx = 0;
+  while(pool.length < TOTAL_REPOS){
+    pool.push({
+      did: DIDS_POOL[padIdx % DIDS_POOL.length],
+      name: `mirror-${padIdx.toString(36)}-${(Math.floor(Math.random()*9999)).toString(36)}`,
+      desc: "Auto-mirrored repository on the gitlawb network.",
+      real: false,
+    });
+    padIdx++;
+  }
+
+  pool.sort((a,b) => hashStr(a.did+"/"+a.name) - hashStr(b.did+"/"+b.name));
+
+  const repos = [];
+  let cursor = 0;
+  TARGET_DISTRIBUTION.forEach(bucket => {
+    for(let i=0;i<bucket.count;i++){
+      if(cursor >= pool.length) break;
+      const p = pool[cursor++];
+      repos.push(makeRepoInTier(p.did, p.name, p.desc, p.real, bucket.tier));
+    }
+  });
+  return repos;
+}
+
+function makeRepoInTier(did, name, desc, real, tier){
+  const fullId = `${did}/${name}`;
+  const h = hashStr(fullId);
+  const rng = rngFromSeed(h);
+  const rarity = RARITY_TIERS[tier];
+
+  const fileSizeKB = rarity.sizeMin + Math.floor(rng()*(rarity.sizeMax - rarity.sizeMin + 1));
+  const stars = Math.floor(rng() * (real ? 30 : 14));
+  const visits = Math.floor(rng() * 200) + (real ? 50 : 5);
+  const commits = Math.floor(rng() * 200) + 3;
+  return {
+    did, name, fullId, desc, real,
+    fileSizeKB,
+    stars, visits, commits,
+    seed: h,
+    rarity,
+    tokenId: 1000 + Math.floor(rng() * 9000),
+    minted: false,
+    level: 1,
+    owner: null,
+  };
+}
+
+function formatSize(kb){
+  if(kb < 1024) return kb + " KB";
+  return (kb/1024).toFixed(2) + " MB";
+}
+
+const STATE = {
+  repos: [],
+  selected: null,
+  walletAddr: "—",
+  walletAddrFull: "",
+  walletBalLAWB: 0,
+  walletBalETH: 0,
+  arcBest: 0,
+};
+
+function updateWalletChip(){
+  const addr = LawbWallet.address || "";
+  STATE.walletAddrFull = addr;
+  STATE.walletAddr = addr ? LawbWallet.short() : "—";
+  document.getElementById("walletAddr").textContent = STATE.walletAddr;
+  document.getElementById("walletBal").textContent = STATE.walletBalLAWB + " $LAWBWORLD";
+  const btn = document.getElementById("btnConnect");
+  if (btn) {
+    btn.textContent = addr ? "DISCONNECT" : "CONNECT";
+    btn.title = addr || "Connect wallet";
+  }
+}
+
+(function wireConnect(){
+  const btn = document.getElementById("btnConnect");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    if (LawbWallet.address) {
+      LawbWallet.disconnect();
+      STATE.walletBalLAWB = 0; STATE.walletBalETH = 0;
+      updateWalletChip();
+      if (STATE.selected) showProfile(STATE.selected.userData.repo, STATE.selected);
+      return;
+    }
+    try {
+      await LawbWallet.connect();
+      await refreshWalletBalances();
+      updateWalletChip();
+      toast("✓ wallet connected", "gold");
+      if (STATE.selected) showProfile(STATE.selected.userData.repo, STATE.selected);
+    } catch (e) { toast(e.message || "connect failed", "error"); }
+  });
+  LawbWallet.onAccountsChanged(async (a) => {
+    if (!a.length) LawbWallet.disconnect();
+    else await LawbWallet.restore();
+    await refreshWalletBalances();
+    updateWalletChip();
+  });
+  LawbWallet.restore().then(async () => {
+    if (LawbWallet.address) await refreshWalletBalances();
+    updateWalletChip();
+  });
+})();
+
+async function refreshWalletBalances(){
+  if (!LawbWallet.address) return;
+  try {
+    const ethBal = await LawbWallet.ethBalance();
+    STATE.walletBalETH = parseFloat(ethers.formatEther(ethBal));
+  } catch (_) {}
+  try {
+    if (apiOnline) {
+      const w = await apiCall("/wallet/" + LawbWallet.address);
+      if (w && typeof w.lawb === "number") STATE.walletBalLAWB = w.lawb;
+    }
+  } catch (_) {}
+}
+
+async function apiCall(path, opts={}){
+  try{
+    const res = await fetch(API_BASE + path, {
+      headers: {"Content-Type":"application/json"},
+      ...opts,
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  }catch(e){
+    throw e;
+  }
+}
+
+async function tryConnectAPI(){
+  try{
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 3500);
+    const res = await fetch(API_BASE + "/health", { method: "GET", signal: ctrl.signal });
+    clearTimeout(t);
+    if(res.ok){
+      apiOnline = true;
+      setApiStatus(true);
+      return true;
+    }
+  }catch(e){}
+  apiOnline = false;
+  setApiStatus(false);
+  return false;
+}
+
+function setApiStatus(online){
+  const el = document.getElementById("apiStatus");
+  const txt = document.getElementById("apiStatusText");
+  el.classList.toggle("online", online);
+  el.classList.toggle("offline", !online);
+  txt.textContent = online ? "API · LIVE" : "LOCAL";
+}
+
+async function loadLocalState(){
+  try{
+    if(window.storage){
+      const saved = await window.storage.get("lawbworld_state");
+      if(saved && saved.value){
+        const data = JSON.parse(saved.value);
+        if(data.mints){
+          data.mints.forEach(m => {
+            const r = STATE.repos.find(x => x.fullId === m.fullId);
+            if(r){ r.minted = true; r.level = m.level || 1; r.owner = m.owner; }
+          });
+        }
+        if(data.wallet) STATE.walletBalLAWB = data.wallet.lawb ?? 128;
+        if(data.arcBest) STATE.arcBest = data.arcBest;
+      }
+    }
+  }catch(e){}
+}
+async function saveLocalState(){
+  try{
+    if(!window.storage) return;
+    const mints = STATE.repos.filter(r=>r.minted).map(r=>({fullId:r.fullId,level:r.level,owner:r.owner}));
+    await window.storage.set("lawbworld_state", JSON.stringify({
+      mints, wallet:{lawb:STATE.walletBalLAWB}, arcBest: STATE.arcBest,
+    }));
+  }catch(e){}
+}
+
+async function loadStateFromAPI(){
+  try{
+
+    const data = await apiCall("/repos?limit=5000");
+    if(data && Array.isArray(data.repos) && data.repos.length){
+      STATE.repos = data.repos.map(adaptServerRepo);
+      STATE.source = data.source || "gitlawb-live";
+      STATE.totalRepos = data.total || STATE.repos.length;
+    }
+    if (STATE.walletAddrFull) {
+      const wallet = await apiCall("/wallet/" + STATE.walletAddrFull);
+      if(wallet && typeof wallet.lawb === "number") STATE.walletBalLAWB = wallet.lawb;
+    }
+  }catch(e){
+    console.warn("[api] sync failed, using local fallback", e);
+  }
+}
+
+function adaptServerRepo(r){
+  const tier = (typeof r.rarityTier === "number") ? r.rarityTier
+    : RARITY_TIERS.findIndex(t => t.name === r.rarity);
+  const rarity = RARITY_TIERS[Math.max(0, tier)] || RARITY_TIERS[0];
+  return {
+    did: r.did,
+    name: r.name,
+    fullId: r.fullId,
+    desc: r.desc || "Federated repository hosted on gitlawb p2p mirrors.",
+    real: r.real !== false,
+    fileSizeKB: r.fileSizeKB || 1,
+    stars: r.stars || 0,
+    visits: r.visits || 0,
+    commits: r.commits || 0,
+    seed: r.seed || hashStr(r.fullId),
+    rarity,
+    tokenId: r.tokenId || (1000 + (hashStr(r.fullId) % 9000000)),
+    minted: !!r.minted,
+    level: r.level || 1,
+    owner: r.owner || null,
+    artUrl:       r.artUrl        || null,
+    artThumbUrl:  r.artThumbUrl   || null,
+    artCityUrl:   r.artCityUrl    || null,
+    artSpriteUrl: r.artSpriteUrl  || null,
+    imageUrl:     r.imageUrl      || r.artUrl || null,
+  };
+}
+
+const ART_TEXTURES = { common: [], uncommon: [], rare: [], epic: [], legendary: [] };
+let ART_READY = false;
+
+async function loadArtTextures(){
+  if (!apiOnline) return;
+  try {
+    const cat = await fetch(API_BASE + "/art").then(r => r.json());
+    if (!cat || !cat.art || !cat.art.buildings) return;
+    const loader = new THREE.TextureLoader();
+    const tasks = [];
+    for (const tier of Object.keys(ART_TEXTURES)) {
+      const urls = cat.art.buildings[tier] || [];
+      ART_TEXTURES[tier] = new Array(urls.length);
+      urls.forEach((url, i) => {
+
+        const thumbUrl = url.replace("/assets/art/", "/assets/art-cutout/256/");
+        tasks.push(new Promise(resolve => {
+          loader.load(thumbUrl, tex => {
+
+            if (THREE.sRGBEncoding !== undefined) tex.encoding = THREE.sRGBEncoding;
+            else if (THREE.SRGBColorSpace !== undefined) tex.colorSpace = THREE.SRGBColorSpace;
+            tex.magFilter = THREE.LinearFilter;
+            tex.minFilter = THREE.LinearMipmapLinearFilter;
+            tex.generateMipmaps = true;
+            tex.anisotropy = 4;
+            ART_TEXTURES[tier][i] = tex;
+            resolve();
+          }, undefined, () => { console.warn("[art] failed to load", thumbUrl); resolve(); });
+        }));
+      });
+    }
+    await Promise.all(tasks);
+    ART_READY = true;
+    console.log("[art] loaded",
+      ART_TEXTURES.legendary.length, "legendary,",
+      ART_TEXTURES.epic.length, "epic,",
+      ART_TEXTURES.rare.length, "rare,",
+      ART_TEXTURES.uncommon.length, "uncommon,",
+      ART_TEXTURES.common.length, "common");
+  } catch (e) {
+    console.warn("[art] catalog fetch failed:", e.message);
+  }
+}
+
+function artTextureFor(repo){
+  const tier = (repo.rarity?.name || "COMMON").toLowerCase();
+  const pool = ART_TEXTURES[tier] || [];
+  if (!pool.length) return null;
+  const idx = (repo.seed >>> 0) % pool.length;
+  return pool[idx] || null;
+}
+
+let renderer, scene, camera, raycaster, mouse;
+let buildingsGroup, towersGroup, landmarksGroup, streetsGroup, npcsGroup, carsGroup, starsMesh;
+let NPCS = [];
+let CARS = [];
+let buildingMeshes = [];
+let highlightOutline = null;
+
+const STAGE = document.getElementById("canvas-stage");
+
+function initThree(){
+  renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+  renderer.setSize(STAGE.clientWidth, STAGE.clientHeight);
+  renderer.setClearColor(0x060912, 1);
+  if (THREE.sRGBEncoding !== undefined) renderer.outputEncoding = THREE.sRGBEncoding;
+  STAGE.appendChild(renderer.domElement);
+
+  scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x060912, 280, 900);
+
+  camera = new THREE.PerspectiveCamera(50, STAGE.clientWidth/STAGE.clientHeight, 0.1, 2500);
+  camera.position.set(200, 160, 200);
+  camera.lookAt(0, 8, 0);
+
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  const ambient = new THREE.AmbientLight(0xffffff, 1.0);
+  scene.add(ambient);
+  const dir = new THREE.DirectionalLight(0xa8baff, 0.4);
+  dir.position.set(80, 140, 60);
+  scene.add(dir);
+
+  const groundGeo = new THREE.PlaneGeometry(900, 900);
+  const groundTex = makeGroundTexture();
+  const groundMat = new THREE.MeshBasicMaterial({ map: groundTex });
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
+
+  const sandTex = makeSandTexture();
+  const sandMat = new THREE.MeshBasicMaterial({
+    map: sandTex,
+    polygonOffset: true,
+    polygonOffsetFactor: -4,
+    polygonOffsetUnits: -10,
+  });
+  const innerCircle = new THREE.Mesh(
+    new THREE.CircleGeometry(118, 64),
+    sandMat
+  );
+  innerCircle.rotation.x = -Math.PI/2;
+  innerCircle.position.y = 0.15;
+  innerCircle.renderOrder = 1;
+  scene.add(innerCircle);
+  const sandRim = new THREE.Mesh(
+    new THREE.RingGeometry(117, 122, 64),
+    new THREE.MeshBasicMaterial({
+      color: 0x6a4f2c,
+      polygonOffset: true,
+      polygonOffsetFactor: -4,
+      polygonOffsetUnits: -10,
+    })
+  );
+  sandRim.rotation.x = -Math.PI/2;
+  sandRim.position.y = 0.16;
+  sandRim.renderOrder = 2;
+  scene.add(sandRim);
+
+  const grid = new THREE.GridHelper(900, 200, 0x10b87a, 0x062417);
+  grid.material.opacity = 0.12;
+  grid.material.transparent = true;
+  grid.material.depthWrite = false;
+  grid.position.y = 0.02;
+  scene.add(grid);
+
+  starsMesh = makeStars();
+  scene.add(starsMesh);
+
+  matrixRain = makeMatrixRain();
+  scene.add(matrixRain);
+
+  streetsGroup = new THREE.Group();
+  scene.add(streetsGroup);
+  buildStreets();
+  buildExtraStreets();
+
+  treesGroup = new THREE.Group();
+  scene.add(treesGroup);
+  buildTrees();
+
+  buildingsGroup = new THREE.Group();
+  scene.add(buildingsGroup);
+  layoutBuildings();
+
+  npcsGroup = new THREE.Group();
+  scene.add(npcsGroup);
+  buildNPCs();
+
+  carsGroup = new THREE.Group();
+  scene.add(carsGroup);
+  buildCars();
+
+  towersGroup = new THREE.Group();
+  scene.add(towersGroup);
+  buildTransmitters();
+
+  landmarksGroup = new THREE.Group();
+  scene.add(landmarksGroup);
+  buildLandmarks();
+
+  window.addEventListener("resize", onResize);
+  STAGE.addEventListener("mousemove", onMouseMove);
+  STAGE.addEventListener("click", onClick);
+  initCameraControls();
+  animate();
+}
+
+function onResize(){
+  if(!renderer || !camera) return;
+  renderer.setSize(STAGE.clientWidth, STAGE.clientHeight);
+  camera.aspect = STAGE.clientWidth / STAGE.clientHeight;
+  camera.updateProjectionMatrix();
+}
+
+function makeStars(){
+  const N = 1000;
+  const geom = new THREE.BufferGeometry();
+  const pos = new Float32Array(N*3);
+  const col = new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    const r = 250 + Math.random()*120;
+    const theta = Math.random()*Math.PI*2;
+    const phi = Math.random()*Math.PI - Math.PI/2;
+    pos[i*3] = Math.cos(theta)*Math.cos(phi)*r;
+    pos[i*3+1] = Math.abs(Math.sin(phi))*r*0.4 + 40;
+    pos[i*3+2] = Math.sin(theta)*Math.cos(phi)*r;
+    const c = Math.random();
+    if(c<0.7){ col[i*3]=1; col[i*3+1]=1; col[i*3+2]=1; }
+    else if(c<0.9){ col[i*3]=0.5; col[i*3+1]=0.9; col[i*3+2]=1; }
+    else { col[i*3]=1; col[i*3+1]=0.6; col[i*3+2]=0.9; }
+  }
+  geom.setAttribute("position", new THREE.BufferAttribute(pos,3));
+  geom.setAttribute("color", new THREE.BufferAttribute(col,3));
+  const mat = new THREE.PointsMaterial({size:0.7, vertexColors:true, sizeAttenuation:true, transparent:true, opacity:0.85});
+  return new THREE.Points(geom, mat);
+}
+
+let matrixRain = null;
+function makeMatrixRain(){
+  const N = 2000;
+  const geom = new THREE.BufferGeometry();
+  const pos = new Float32Array(N*3);
+  const col = new Float32Array(N*3);
+  const speed = new Float32Array(N);
+  const FIELD = 380;
+  const TOP   = 220;
+  const BOTTOM = -4;
+  for(let i=0;i<N;i++){
+    pos[i*3]   = (Math.random()*2-1) * FIELD;
+    pos[i*3+1] = Math.random() * TOP;
+    pos[i*3+2] = (Math.random()*2-1) * FIELD;
+
+    const head = Math.random() < 0.06;
+    const g = head ? 1.0 : 0.45 + Math.random()*0.4;
+    col[i*3]   = head ? 0.85 : 0.05;
+    col[i*3+1] = g;
+    col[i*3+2] = head ? 0.6 : 0.15;
+    speed[i] = 18 + Math.random() * 42;
+  }
+  geom.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geom.setAttribute("color",    new THREE.BufferAttribute(col, 3));
+  geom.userData = { speed, FIELD, TOP, BOTTOM };
+  const mat = new THREE.PointsMaterial({
+    size: 0.45,
+    vertexColors: true,
+    sizeAttenuation: true,
+    transparent: true,
+    opacity: 0.5,
+    depthWrite: false,
+  });
+  return new THREE.Points(geom, mat);
+}
+
+function tickMatrixRain(dt){
+  if(!matrixRain) return;
+  const geom = matrixRain.geometry;
+  const pos = geom.attributes.position.array;
+  const { speed, FIELD, TOP, BOTTOM } = geom.userData;
+  const N = speed.length;
+  for(let i=0;i<N;i++){
+    pos[i*3+1] -= speed[i] * dt;
+    if(pos[i*3+1] < BOTTOM){
+      pos[i*3]   = (Math.random()*2-1) * FIELD;
+      pos[i*3+1] = TOP + Math.random()*40;
+      pos[i*3+2] = (Math.random()*2-1) * FIELD;
+    }
+  }
+  geom.attributes.position.needsUpdate = true;
+}
+
+const WIN_TEX_BUCKETS = 8;
+const _texCache = new Map();
+const _matCache = new Map();
+const _bodyGeoCache = new Map();
+
+function bodyGeometry(w, h, d){
+  const key = `${w}|${h}|${d}`;
+  let g = _bodyGeoCache.get(key);
+  if(!g){ g = new THREE.BoxGeometry(w, h, d); _bodyGeoCache.set(key, g); }
+  return g;
+}
+
+function makeFacadeTexture(tier, bucket){
+  const key = `t${tier}.b${bucket}`;
+  let tex = _texCache.get(key);
+  if(tex) return tex;
+
+  const rarity = RARITY_TIERS[tier] || RARITY_TIERS[0];
+  const c = document.createElement("canvas");
+
+  c.width = 32; c.height = 64;
+  const ctx = c.getContext("2d");
+
+  const body = new THREE.Color(0x161e30).lerp(new THREE.Color(rarity.color), 0.16 + tier*0.06);
+  ctx.fillStyle = "#" + body.getHexString();
+  ctx.fillRect(0, 0, c.width, c.height);
+
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  for(let x = 0; x < c.width; x += 8){ ctx.fillRect(x, 0, 1, c.height); }
+
+  const winLit  = "#" + new THREE.Color(rarity.glow).getHexString();
+  const winDim  = "#" + new THREE.Color(rarity.glow).multiplyScalar(0.22).getHexString();
+  const winOff  = "#0a0e1a";
+  const cols = 4, rows = 12;
+  const cellW = c.width / cols;
+  const cellH = c.height / rows;
+
+  let seed = (tier * 131 + bucket * 17 + 11) >>> 0;
+  const rng = () => { seed ^= seed << 13; seed >>>= 0; seed ^= seed >>> 17; seed ^= seed << 5; seed >>>= 0; return seed / 4294967295; };
+
+  for(let r = 1; r < rows - 1; r++){
+    for(let col = 0; col < cols; col++){
+      const x = Math.floor(col * cellW + 2);
+      const y = Math.floor(r * cellH + 1);
+      const w = Math.floor(cellW - 4);
+      const h = Math.max(2, Math.floor(cellH - 2));
+      const p = rng();
+      let fill;
+      if(p < 0.55)       fill = winLit;
+      else if(p < 0.85)  fill = winDim;
+      else               fill = winOff;
+      ctx.fillStyle = fill;
+      ctx.fillRect(x, y, w, h);
+
+      if(fill === winLit){
+        ctx.fillStyle = "rgba(255,255,255,0.45)";
+        ctx.fillRect(x + 1, y + 1, 1, 1);
+      }
+    }
+  }
+
+  ctx.fillStyle = "#" + new THREE.Color(rarity.glow).multiplyScalar(0.55).getHexString();
+  ctx.fillRect(0, c.height - 4, c.width, 3);
+
+  tex = new THREE.CanvasTexture(c);
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  _texCache.set(key, tex);
+  return tex;
+}
+
+function facadeMaterials(tier, bucket){
+  const key = `t${tier}.b${bucket}`;
+  let mats = _matCache.get(key);
+  if(mats) return mats;
+  const tex = makeFacadeTexture(tier, bucket);
+
+  const rarity = RARITY_TIERS[tier] || RARITY_TIERS[0];
+  const topColor    = new THREE.Color(rarity.color).multiplyScalar(0.55);
+  const bottomColor = new THREE.Color(0x0a0e1a);
+  const sideMat = new THREE.MeshBasicMaterial({ map: tex });
+
+  mats = [
+    sideMat, sideMat,
+    new THREE.MeshBasicMaterial({ color: topColor }),
+    new THREE.MeshBasicMaterial({ color: bottomColor }),
+    sideMat, sideMat,
+  ];
+  _matCache.set(key, mats);
+  return mats;
+}
+
+const _spriteMatCache = new Map();
+function spriteMaterialFor(repo){
+  const tier = (repo.rarity?.name || "COMMON").toLowerCase();
+  const pool = ART_TEXTURES[tier] || [];
+  if (!pool.length) return null;
+  const idx = (repo.seed >>> 0) % pool.length;
+  const key = `${tier}.${idx}`;
+  let mat = _spriteMatCache.get(key);
+  if (!mat) {
+    const tex = pool[idx];
+    if (!tex) return null;
+
+    mat = new THREE.SpriteMaterial({
+      map: tex,
+      transparent: true,
+      alphaTest: 0.35,
+      depthWrite: false,
+    });
+    _spriteMatCache.set(key, mat);
+  }
+  return mat;
+}
+
+const RARITY_PALETTE = [
+  { body: 0x1a2536, top: 0x4a5970, window: 0x9bb3d3, glow: 0x506a96 },
+  { body: 0x143f33, top: 0x34d399, window: 0xa7f3d0, glow: 0x10b981 },
+  { body: 0x132f4a, top: 0x38bdf8, window: 0xbae6fd, glow: 0x0ea5e9 },
+  { body: 0x2a1c4a, top: 0xc084fc, window: 0xe9d5ff, glow: 0xa855f7 },
+  { body: 0x3d2b14, top: 0xfbbf24, window: 0xfde68a, glow: 0xf59e0b },
+];
+
+const VOXEL_WIN_BUCKETS = 8;
+const _voxelTexCache = new Map();
+function voxelWindowTexture(tier, bucket){
+  const key = `${tier}.${bucket}`;
+  if (_voxelTexCache.has(key)) return _voxelTexCache.get(key);
+  const p = RARITY_PALETTE[tier] || RARITY_PALETTE[0];
+  const c = document.createElement("canvas");
+  c.width = 16; c.height = 64;
+  const ctx = c.getContext("2d");
+
+  ctx.fillStyle = "#" + new THREE.Color(p.body).getHexString();
+  ctx.fillRect(0, 0, 16, 64);
+
+  const cols = 4, rows = 14;
+  const cellW = 4;
+  const cellH = c.height / rows;
+  let seed = (tier * 131 + bucket * 17 + 7) >>> 0;
+  const rng = () => { seed ^= seed << 13; seed >>>= 0; seed ^= seed >>> 17; seed ^= seed << 5; seed >>>= 0; return seed / 4294967295; };
+  const lit  = "#" + new THREE.Color(p.window).getHexString();
+  const dim  = "#" + new THREE.Color(p.window).multiplyScalar(0.22).getHexString();
+  const dark = "#0a0e1a";
+  for (let r = 1; r < rows - 1; r++) {
+    for (let col = 0; col < cols; col++) {
+      const x = col * cellW + 1;
+      const y = Math.floor(r * cellH);
+      const w = 2, h = Math.max(1, Math.floor(cellH - 1));
+      const p2 = rng();
+      ctx.fillStyle = p2 < 0.50 ? lit : p2 < 0.82 ? dim : dark;
+      ctx.fillRect(x, y, w, h);
+    }
+  }
+
+  ctx.fillStyle = "#" + new THREE.Color(p.glow).multiplyScalar(0.7).getHexString();
+  ctx.fillRect(0, c.height - 2, c.width, 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  _voxelTexCache.set(key, tex);
+  return tex;
+}
+
+const _voxelMatCache = new Map();
+function voxelMaterials(tier, bucket){
+  const key = `${tier}.${bucket}`;
+  if (_voxelMatCache.has(key)) return _voxelMatCache.get(key);
+  const p = RARITY_PALETTE[tier] || RARITY_PALETTE[0];
+  const sideMat = new THREE.MeshBasicMaterial({
+    map: voxelWindowTexture(tier, bucket),
+  });
+  const topMat = new THREE.MeshBasicMaterial({
+    color: new THREE.Color(p.top).multiplyScalar(0.85),
+  });
+  const bottomMat = new THREE.MeshBasicMaterial({ color: 0x05080f });
+
+  const mats = [sideMat, sideMat, topMat, bottomMat, sideMat, sideMat];
+  _voxelMatCache.set(key, mats);
+  return mats;
+}
+
+function makeBuilding(repo){
+  const rng = rngFromSeed(repo.seed);
+  const sizeKB = repo.fileSizeKB;
+  const tier   = repo.rarity.tier;
+
+  const w = 4 + Math.floor(rng()*3) + Math.min(5, Math.floor(Math.log10(Math.max(sizeKB,1))/1.5));
+  const d = 4 + Math.floor(rng()*3) + Math.min(5, Math.floor(Math.log10(Math.max(sizeKB,1))/1.8));
+  const h = Math.max(8, Math.round(Math.log10(Math.max(sizeKB,1))*8.5 + tier*5.5 + rng()*7));
+
+  const bucket = repo.seed % VOXEL_WIN_BUCKETS;
+  const mats = voxelMaterials(tier, bucket);
+  const body = new THREE.Mesh(bodyGeometry(w, h, d), mats);
+  body.position.y = h/2;
+
+  const group = new THREE.Group();
+  group.add(body);
+  group.userData.repo = repo;
+  group.userData.body = body;
+  group.userData.dims = { w, h, d };
+
+  const p = RARITY_PALETTE[tier] || RARITY_PALETTE[0];
+  const crown = new THREE.Mesh(
+    bodyGeometry(w + 0.15, 0.4, d + 0.15),
+    new THREE.MeshBasicMaterial({ color: p.top })
+  );
+  crown.position.y = h + 0.2;
+  group.add(crown);
+
+  if (tier >= 2) {
+    const antH = 0.8 + tier * 0.7;
+    const ant = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, antH, 0.12),
+      new THREE.MeshBasicMaterial({ color: p.glow })
+    );
+    ant.position.y = h + 0.4 + antH/2;
+    group.add(ant);
+    const tip = new THREE.Mesh(
+      new THREE.BoxGeometry(0.26, 0.26, 0.26),
+      new THREE.MeshBasicMaterial({ color: p.window })
+    );
+    tip.position.y = h + 0.4 + antH + 0.2;
+    tip.userData.blink = true;
+    tip.userData.color = p.window;
+    group.add(tip);
+  }
+
+  if (tier === 4) {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(Math.max(w, d) * 0.65, 0.07, 6, 18),
+      new THREE.MeshBasicMaterial({ color: p.top })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = h + 0.6;
+    ring.userData.rotate = true;
+    group.add(ring);
+  }
+
+  if (repo.minted) addMintAura(group, repo, w, d, h);
+  return group;
+}
+
+function addMintAura(group, repo, w, d, h){
+  const ringGeo = new THREE.RingGeometry(Math.max(w,d)*0.7, Math.max(w,d)*0.95, 24);
+  const ringMat = new THREE.MeshBasicMaterial({color: 0xffbe0b, side:THREE.DoubleSide, transparent:true, opacity:0.6});
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = -Math.PI/2;
+  ring.position.y = 0.02;
+  ring.userData.aura = true;
+  group.add(ring);
+  const fGeo = new THREE.BoxGeometry(0.8, 0.4, 0.05);
+  const fMat = new THREE.MeshBasicMaterial({color: 0xffbe0b});
+  const f = new THREE.Mesh(fGeo, fMat);
+  f.position.y = (h || (group.userData.dims ? group.userData.dims.h : 8)) + 2.5;
+  f.userData.flag = true;
+  group.add(f);
+}
+
+function layoutBuildings(){
+  const repos = STATE.repos;
+  const N = repos.length;
+
+  const order = [...repos].sort((a, b) => hashStr(a.fullId + "L") - hashStr(b.fullId + "L"));
+  const INNER_HOLE   = 200;
+  const OUTER_RADIUS = Math.min(500, 100 + Math.sqrt(N) * 8.4);
+
+  const placed = [];
+  for (let i = 0; i < order.length; i++) {
+    const r = order[i];
+    const t = (i + 0.5) / order.length;
+
+    const radius = Math.sqrt(INNER_HOLE * INNER_HOLE + t * (OUTER_RADIUS * OUTER_RADIUS - INNER_HOLE * INNER_HOLE));
+    const angle = i * 2.39996 + hashStr(r.fullId + "a") * 0.0000001;
+    const jit = rngFromSeed(r.seed ^ 0xABCD);
+    let x = Math.cos(angle) * radius + (jit() - 0.5) * 4.5;
+    let z = Math.sin(angle) * radius + (jit() - 0.5) * 4.5;
+    const sizeKB = r.fileSizeKB || 1;
+    const estW = 4 + Math.min(5, Math.floor(Math.log10(Math.max(sizeKB,1))/1.5)) + 1.5;
+    const estD = 4 + Math.min(5, Math.floor(Math.log10(Math.max(sizeKB,1))/1.8)) + 1.5;
+    const footprintHalf = Math.max(estW, estD) / 2 * 1.42;
+    const adj = pushOffRoad(x, z, footprintHalf);
+    placed.push({ r, x: adj.x, z: adj.z });
+  }
+
+  placed.forEach(({ r, x, z }) => {
+    const b = makeBuilding(r);
+    b.position.set(x, 0, z);
+    buildingsGroup.add(b);
+    buildingMeshes.push({ mesh: b, repo: r });
+    r.cityX = x;
+    r.cityZ = z;
+  });
+}
+
+let PEERS = [];
+const _peerTexCache = new Map();
+
+async function loadPeers(){
+  if(!apiOnline) return;
+  try {
+    const r = await fetch(API_BASE + "/peers").then(r => r.json());
+    PEERS = Array.isArray(r.peers) ? r.peers : [];
+    renderPeers();
+  } catch (e) {
+    console.warn("[peers] fetch failed:", e.message);
+  }
+}
+
+function buildTransmitters(){
+  loadPeers().catch(()=>{});
+}
+
+function buildPeerTower(peer){
+  const colorByStatus = peer.status === "reachable" ? 0x00f5d4
+                      : peer.status === "warn"      ? 0xfbbf24 : 0xff3b3b;
+  const scaffoldColor = peer.status === "unreachable" ? 0x4a1a1a : 0x1a2a40;
+  const dimGlow       = peer.status === "unreachable" ? 0x803333 : 0x2cb6ff;
+  const g = new THREE.Group();
+
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(6, 1.6, 6),
+    new THREE.MeshBasicMaterial({ color: 0x0e1424 })
+  );
+  base.position.y = 0.8;
+  g.add(base);
+
+  const SEGS = 14;
+  const SEG_H = 5;
+  const LEG_TOP = 0.6;
+  const LEG_BOT = 2.4;
+  const legMat = new THREE.MeshBasicMaterial({ color: scaffoldColor });
+  for (let corner = 0; corner < 4; corner++) {
+    const sx = corner === 0 || corner === 1 ? 1 : -1;
+    const sz = corner === 0 || corner === 3 ? 1 : -1;
+    for (let s = 0; s < SEGS; s++) {
+      const t = s / (SEGS - 1);
+      const spread = LEG_BOT + (LEG_TOP - LEG_BOT) * t;
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.45, SEG_H * 0.92, 0.45), legMat);
+      leg.position.set(sx * spread, 1.6 + s * SEG_H + SEG_H/2, sz * spread);
+      g.add(leg);
+    }
+  }
+
+  const braceMat = new THREE.MeshBasicMaterial({ color: scaffoldColor });
+  for (let s = 0; s < SEGS; s += 2) {
+    const t = s / (SEGS - 1);
+    const spread = LEG_BOT + (LEG_TOP - LEG_BOT) * t;
+    const y = 1.6 + s * SEG_H + 0.5;
+    const hLen = spread * 2 + 0.3;
+    const bxFront = new THREE.Mesh(new THREE.BoxGeometry(hLen, 0.22, 0.22), braceMat);
+    bxFront.position.set(0, y,  spread);
+    const bxBack = new THREE.Mesh(new THREE.BoxGeometry(hLen, 0.22, 0.22), braceMat);
+    bxBack.position.set(0, y, -spread);
+    const bzRight = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, hLen), braceMat);
+    bzRight.position.set( spread, y, 0);
+    const bzLeft  = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, hLen), braceMat);
+    bzLeft.position.set(-spread, y, 0);
+    g.add(bxFront, bxBack, bzRight, bzLeft);
+  }
+
+  const TOWER_H = 1.6 + SEGS * SEG_H;
+  const platform = new THREE.Mesh(
+    new THREE.BoxGeometry(LEG_TOP * 2 + 0.8, 0.6, LEG_TOP * 2 + 0.8),
+    new THREE.MeshBasicMaterial({ color: 0x232c44 })
+  );
+  platform.position.y = TOWER_H + 0.3;
+  g.add(platform);
+
+  const dish = new THREE.Mesh(
+    new THREE.BoxGeometry(2.6, 0.4, 2.6),
+    new THREE.MeshBasicMaterial({ color: colorByStatus })
+  );
+  dish.position.y = TOWER_H + 1.0;
+  g.add(dish);
+  for (let i = 0; i < 4; i++) {
+    const arm = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.18, 3.4),
+      new THREE.MeshBasicMaterial({ color: dimGlow })
+    );
+    arm.rotation.y = (i * Math.PI) / 2;
+    arm.position.y = TOWER_H + 0.6;
+    g.add(arm);
+  }
+
+  const spike = new THREE.Mesh(
+    new THREE.BoxGeometry(0.28, 6, 0.28),
+    new THREE.MeshBasicMaterial({ color: scaffoldColor })
+  );
+  spike.position.y = TOWER_H + 4;
+  g.add(spike);
+  const beacon = new THREE.Mesh(
+    new THREE.BoxGeometry(0.9, 0.9, 0.9),
+    new THREE.MeshBasicMaterial({ color: colorByStatus })
+  );
+  beacon.position.y = TOWER_H + 7.3;
+  beacon.userData.blink = true;
+  beacon.userData.color = colorByStatus;
+  g.add(beacon);
+
+  g.userData.peer = peer;
+  g.userData.light = beacon;
+  g.userData.dims = { w: 6, h: TOWER_H + 8, d: 6 };
+  return g;
+}
+
+function makeSandTexture(){
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#c9a771";
+  ctx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 60; i++) {
+    const cx = Math.random() * 256;
+    const cy = Math.random() * 256;
+    const r  = 6 + Math.random() * 40;
+    const g  = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    const dark = Math.random() < 0.5;
+    g.addColorStop(0, dark ? "rgba(140,108,68,0.55)" : "rgba(220,196,148,0.45)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+  }
+  for (let y = 0; y < 128; y++) {
+    for (let x = 0; x < 128; x++) {
+      if (Math.random() < 0.018) {
+        ctx.fillStyle = "rgba(80,55,30,0.4)";
+        ctx.fillRect(x * 2, y * 2, 2, 2);
+      }
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(3, 3);
+  return tex;
+}
+
+function makeGroundTexture(){
+  const c = document.createElement("canvas");
+  c.width = c.height = 512;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#04150d";
+  ctx.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 90; i++) {
+    const cx = Math.random() * 512;
+    const cy = Math.random() * 512;
+    const r  = 12 + Math.random() * 60;
+    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    const dark = Math.random() < 0.5;
+    grd.addColorStop(0, dark ? "rgba(2,10,7,0.55)" : "rgba(28,80,55,0.4)");
+    grd.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+  }
+  for (let y = 0; y < 256; y++) {
+    for (let x = 0; x < 256; x++) {
+      if (Math.random() < 0.012) {
+        ctx.fillStyle = "rgba(0,245,212,0.18)";
+        ctx.fillRect(x * 2, y * 2, 2, 2);
+      } else if (Math.random() < 0.006) {
+        ctx.fillStyle = "rgba(251,191,36,0.12)";
+        ctx.fillRect(x * 2, y * 2, 2, 2);
+      }
+    }
+  }
+  for (let i = 0; i < 14; i++) {
+    ctx.strokeStyle = `rgba(16,184,122,${0.04 + Math.random() * 0.05})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    const x1 = Math.random() * 512, y1 = Math.random() * 512;
+    const x2 = x1 + (Math.random() - 0.5) * 200;
+    const y2 = y1 + (Math.random() - 0.5) * 200;
+    ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(6, 6);
+  return tex;
+}
+
+const _treeMats = {
+  trunkA: new THREE.MeshBasicMaterial({ color: 0x3a2517 }),
+  trunkB: new THREE.MeshBasicMaterial({ color: 0x5a3a20 }),
+  leafA:  new THREE.MeshBasicMaterial({ color: 0x143f33 }),
+  leafB:  new THREE.MeshBasicMaterial({ color: 0x1f7a59 }),
+  leafC:  new THREE.MeshBasicMaterial({ color: 0x34d399 }),
+  pine:   new THREE.MeshBasicMaterial({ color: 0x0e3a2e }),
+  pineLt: new THREE.MeshBasicMaterial({ color: 0x14533f }),
+};
+
+let treesGroup;
+function makeTree(variant, scale){
+  const g = new THREE.Group();
+  if (variant === "oak") {
+    const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.9*scale, 3.2*scale, 0.9*scale), _treeMats.trunkA);
+    trunk.position.y = 1.6 * scale; g.add(trunk);
+    const core = new THREE.Mesh(new THREE.BoxGeometry(3.4*scale, 2.6*scale, 3.4*scale), _treeMats.leafB);
+    core.position.y = 4.5 * scale; g.add(core);
+    for (let i = 0; i < 4; i++) {
+      const a = i * Math.PI / 2;
+      const tuft = new THREE.Mesh(new THREE.BoxGeometry(1.9*scale, 1.4*scale, 1.9*scale), _treeMats.leafC);
+      tuft.position.set(Math.cos(a) * 1.5*scale, 5.6 * scale, Math.sin(a) * 1.5*scale);
+      g.add(tuft);
+    }
+    const top = new THREE.Mesh(new THREE.BoxGeometry(1.4*scale, 1.0*scale, 1.4*scale), _treeMats.leafC);
+    top.position.y = 6.6 * scale; g.add(top);
+  } else if (variant === "pine") {
+    const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.7*scale, 2.2*scale, 0.7*scale), _treeMats.trunkB);
+    trunk.position.y = 1.1 * scale; g.add(trunk);
+    const layers = 5;
+    for (let i = 0; i < layers; i++) {
+      const w = (3.4 - i * 0.6) * scale;
+      const mat = i % 2 === 0 ? _treeMats.pine : _treeMats.pineLt;
+      const layer = new THREE.Mesh(new THREE.BoxGeometry(w, 1.3*scale, w), mat);
+      layer.position.y = (2.5 + i * 1.15) * scale;
+      g.add(layer);
+    }
+    const spike = new THREE.Mesh(new THREE.BoxGeometry(0.3*scale, 0.9*scale, 0.3*scale), _treeMats.pineLt);
+    spike.position.y = (2.5 + layers * 1.15 + 0.3) * scale;
+    g.add(spike);
+  } else {
+    const bush = new THREE.Mesh(new THREE.BoxGeometry(2.3*scale, 1.5*scale, 2.3*scale), _treeMats.leafA);
+    bush.position.y = 0.75 * scale; g.add(bush);
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(1.6*scale, 1.0*scale, 1.6*scale), _treeMats.leafC);
+    cap.position.set(0.3 * scale, 1.5 * scale, 0.2 * scale); g.add(cap);
+    const tiny = new THREE.Mesh(new THREE.BoxGeometry(0.9*scale, 0.6*scale, 0.9*scale), _treeMats.leafB);
+    tiny.position.set(-0.6 * scale, 1.4 * scale, -0.4 * scale); g.add(tiny);
+  }
+  return g;
+}
+
+function buildTrees(){
+  if (!treesGroup) return;
+  const VARIANTS = ["oak", "pine", "bush"];
+  const taken = [];
+
+  const LANDMARK_PAD = 38;
+  const tryPlace = (x, z, scale, minSep = 4) => {
+    if (LANDMARKS.some(L => Math.hypot(L.x - x, L.z - z) < LANDMARK_PAD)) return false;
+    if (distanceToNearestRoad(x, z) < ROAD_CLEARANCE + 1.5) return false;
+    for (const t of taken) if (Math.hypot(t.x - x, t.z - z) < minSep) return false;
+    const v = VARIANTS[Math.floor(Math.random() * VARIANTS.length)];
+    const tree = makeTree(v, scale);
+    tree.position.set(x, 0, z);
+    tree.rotation.y = Math.random() * Math.PI * 2;
+    treesGroup.add(tree);
+    taken.push({ x, z });
+    return true;
+  };
+
+  for (const L of LANDMARKS) {
+    let added = 0;
+    for (let k = 0; k < 24 && added < 3; k++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = LANDMARK_PAD + 6 + Math.random() * 10;
+      const x = L.x + Math.cos(a) * r;
+      const z = L.z + Math.sin(a) * r;
+      if (tryPlace(x, z, 0.85 + Math.random() * 0.5, 7)) added++;
+    }
+  }
+
+  for (let i = 0; i < 200 && taken.length < 60; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = 60 + Math.random() * 50;
+    const x = Math.cos(angle) * r;
+    const z = Math.sin(angle) * r;
+    tryPlace(x, z, 0.7 + Math.random() * 0.6, 6);
+  }
+
+  for (let i = 0; i < 400; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = 200 + Math.random() * 290;
+    const x = Math.cos(angle) * r;
+    const z = Math.sin(angle) * r;
+    tryPlace(x, z, 0.7 + Math.random() * 0.8, 6);
+  }
+}
+
+const ROAD_RADIALS  = 8;
+const ROAD_RINGS_R  = [150, 220, 290, 370];
+const ROAD_WIDTH    = 8;
+const ROAD_HALF     = ROAD_WIDTH / 2;
+const ROAD_CLEARANCE = ROAD_HALF + 1.5;
+const RADIAL_INNER_R = 115;
+
+function buildExtraStreets(){}
+
+function buildStreets(){
+  if (!streetsGroup) return;
+  const LEN = ROAD_RINGS_R[ROAD_RINGS_R.length - 1] * 2 + 60;
+  const roadMat   = new THREE.MeshBasicMaterial({ color: 0x05060a });
+  const curbMat   = new THREE.MeshBasicMaterial({ color: 0x222b3a, transparent: true, opacity: 0.85, depthWrite: false });
+  const stripeMat = new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.55, depthWrite: false });
+
+  for (let i = 0; i < ROAD_RADIALS; i++) {
+    const angle = (i / ROAD_RADIALS) * Math.PI * 2;
+    const outerEnd = LEN / 2;
+    const halfLen  = outerEnd - RADIAL_INNER_R;
+
+    for (const dir of [1, -1]) {
+      const midR = (RADIAL_INNER_R + outerEnd) / 2 * dir;
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(halfLen, 0.06, ROAD_WIDTH), roadMat);
+      seg.position.set(Math.cos(angle) * midR, 0.03, Math.sin(angle) * midR);
+      seg.rotation.y = -angle;
+      streetsGroup.add(seg);
+
+      for (const sign of [1, -1]) {
+        const curb = new THREE.Mesh(new THREE.BoxGeometry(halfLen, 0.08, 0.35), curbMat);
+        const offX = -Math.sin(-angle) * (ROAD_WIDTH / 2 + 0.15) * sign;
+        const offZ =  Math.cos(-angle) * (ROAD_WIDTH / 2 + 0.15) * sign;
+        curb.position.set(Math.cos(angle) * midR + offX, 0.06, Math.sin(angle) * midR + offZ);
+        curb.rotation.y = -angle;
+        streetsGroup.add(curb);
+      }
+    }
+
+    const dashLen = 6, dashGap = 6;
+    const dashCount = Math.floor((outerEnd - RADIAL_INNER_R) / (dashLen + dashGap));
+    for (const dir of [1, -1]) {
+      for (let d = 0; d < dashCount; d++) {
+        const r = RADIAL_INNER_R + (d + 0.5) * (dashLen + dashGap);
+        if (r > outerEnd) break;
+        const dx = Math.cos(angle) * r * dir;
+        const dz = Math.sin(angle) * r * dir;
+        if (Math.hypot(dx, dz) < 130) continue;
+        const dash = new THREE.Mesh(new THREE.BoxGeometry(dashLen, 0.07, 0.5), stripeMat);
+        dash.position.set(dx, 0.07, dz);
+        dash.rotation.y = -angle;
+        streetsGroup.add(dash);
+      }
+    }
+  }
+
+  for (const RING_R of ROAD_RINGS_R) {
+    const SEGS = Math.max(36, Math.floor(RING_R / 6));
+    for (let i = 0; i < SEGS; i++) {
+      const am = ((i + 0.5) / SEGS) * Math.PI * 2;
+      const segLen = RING_R * (2 * Math.PI / SEGS) + 1.5;
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(segLen, 0.06, ROAD_WIDTH), roadMat);
+      seg.position.set(Math.cos(am) * RING_R, 0.028, Math.sin(am) * RING_R);
+      seg.rotation.y = -am + Math.PI / 2;
+      streetsGroup.add(seg);
+    }
+    const STRIPES = Math.max(48, Math.floor(RING_R / 4));
+    for (let i = 0; i < STRIPES; i++) {
+      if (i % 2 === 1) continue;
+      const am = (i / STRIPES) * Math.PI * 2;
+      const stripeLen = RING_R * (2 * Math.PI / STRIPES) * 0.8;
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(stripeLen, 0.07, 0.4), stripeMat);
+      stripe.position.set(Math.cos(am) * RING_R, 0.07, Math.sin(am) * RING_R);
+      stripe.rotation.y = -am + Math.PI / 2;
+      streetsGroup.add(stripe);
+    }
+  }
+
+  for (let i = 0; i < ROAD_RADIALS; i++) {
+    const angle = (i / ROAD_RADIALS) * Math.PI * 2;
+    for (const r of ROAD_RINGS_R) {
+      if (r < RADIAL_INNER_R) continue;
+      const node = new THREE.Mesh(
+        new THREE.BoxGeometry(ROAD_WIDTH + 1, 0.07, ROAD_WIDTH + 1),
+        new THREE.MeshBasicMaterial({ color: 0x0a0c12 })
+      );
+      node.position.set(Math.cos(angle) * r, 0.04, Math.sin(angle) * r);
+      streetsGroup.add(node);
+    }
+  }
+}
+
+function nearestRoad(x, z){
+  const r = Math.hypot(x, z);
+  if (r < 0.5) return { dist: 999, dirX: 1, dirZ: 0 };
+  const ang = Math.atan2(z, x);
+  let best = { dist: Infinity, dirX: 0, dirZ: 0 };
+  if (r >= RADIAL_INNER_R - 4) {
+    for (let i = 0; i < ROAD_RADIALS; i++) {
+      const roadAng = (i / ROAD_RADIALS) * Math.PI * 2;
+      const dAng = ((ang - roadAng + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      const perp = Math.abs(r * Math.sin(dAng));
+      if (perp < best.dist) {
+        const sign = Math.sign(Math.sin(dAng)) || 1;
+        best = {
+          dist: perp,
+          dirX: -Math.sin(roadAng) * sign,
+          dirZ:  Math.cos(roadAng) * sign,
+        };
+      }
+    }
+  }
+  for (const ringR of ROAD_RINGS_R) {
+    const d = Math.abs(r - ringR);
+    if (d < best.dist) {
+      const sign = r >= ringR ? 1 : -1;
+      best = {
+        dist: d,
+        dirX: (x / r) * sign,
+        dirZ: (z / r) * sign,
+      };
+    }
+  }
+  if (best.dist === Infinity) best = { dist: 999, dirX: 0, dirZ: 0 };
+  return best;
+}
+
+function distanceToNearestRoad(x, z){ return nearestRoad(x, z).dist; }
+
+function pushOffRoad(x, z, footprintHalf){
+  const need = footprintHalf + ROAD_CLEARANCE;
+  let cx = x, cz = z;
+  for (let iter = 0; iter < 8; iter++) {
+    const info = nearestRoad(cx, cz);
+    if (info.dist >= need) return { x: cx, z: cz };
+    const push = need - info.dist + 0.8;
+    cx += info.dirX * push;
+    cz += info.dirZ * push;
+  }
+  return { x: cx, z: cz };
+}
+
+const NPC_PALETTE = [
+  { shirt: 0xfbbf24, pants: 0x422917, hat: 0x111827, skin: 0xf3d5b5 },
+  { shirt: 0x00f5d4, pants: 0x0e2a3e, hat: 0xff006e, skin: 0xe7c4a0 },
+  { shirt: 0xc084fc, pants: 0x2a1c4a, hat: 0xfbbf24, skin: 0xf3d5b5 },
+  { shirt: 0x38bdf8, pants: 0x0c1a2e, hat: 0xffffff, skin: 0xd9b596 },
+  { shirt: 0xff006e, pants: 0x2a0d18, hat: 0x111827, skin: 0xeac4a3 },
+  { shirt: 0x34d399, pants: 0x143f33, hat: 0xef4444, skin: 0xf3d5b5 },
+  { shirt: 0xef4444, pants: 0x1a1f2b, hat: 0x00f5d4, skin: 0xc99b75 },
+  { shirt: 0xfb923c, pants: 0x2a1a05, hat: 0x111827, skin: 0xf3d5b5 },
+];
+const _npcMats = NPC_PALETTE.map(p => ({
+  shirt: new THREE.MeshBasicMaterial({ color: p.shirt }),
+  pants: new THREE.MeshBasicMaterial({ color: p.pants }),
+  hat:   new THREE.MeshBasicMaterial({ color: p.hat }),
+  skin:  new THREE.MeshBasicMaterial({ color: p.skin }),
+}));
+
+const _npcGeo = {
+  torso: new THREE.BoxGeometry(1.6, 2.0, 0.9),
+  head:  new THREE.BoxGeometry(1.4, 1.4, 1.4),
+  hat:   new THREE.BoxGeometry(1.9, 0.5, 1.9),
+  arm:   new THREE.BoxGeometry(0.55, 1.9, 0.55),
+  leg:   new THREE.BoxGeometry(0.7, 1.9, 0.7),
+  eye:   new THREE.BoxGeometry(0.18, 0.18, 0.1),
+  hatBrim: new THREE.BoxGeometry(2.4, 0.18, 2.4),
+};
+
+function buildNPCs(){
+  if(!npcsGroup) return;
+  NPCS = [];
+  const N = 60;
+  for(let i = 0; i < N; i++){
+    const npc = new THREE.Group();
+    const pal = _npcMats[i % _npcMats.length];
+
+    const legL = new THREE.Mesh(_npcGeo.leg, pal.pants);
+    legL.position.set(-0.42, 0.95, 0);
+    npc.add(legL);
+    const legR = new THREE.Mesh(_npcGeo.leg, pal.pants);
+    legR.position.set(0.42, 0.95, 0);
+    npc.add(legR);
+
+    const torso = new THREE.Mesh(_npcGeo.torso, pal.shirt);
+    torso.position.y = 2.9;
+    npc.add(torso);
+
+    const armL = new THREE.Mesh(_npcGeo.arm, pal.shirt);
+    armL.position.set(-1.07, 2.9, 0);
+    npc.add(armL);
+    const armR = new THREE.Mesh(_npcGeo.arm, pal.shirt);
+    armR.position.set(1.07, 2.9, 0);
+    npc.add(armR);
+
+    const head = new THREE.Mesh(_npcGeo.head, pal.skin);
+    head.position.y = 4.6;
+    npc.add(head);
+
+    const eyeL = new THREE.Mesh(_npcGeo.eye, new THREE.MeshBasicMaterial({ color: 0x111827 }));
+    eyeL.position.set(-0.28, 4.7, 0.71);
+    npc.add(eyeL);
+    const eyeR = new THREE.Mesh(_npcGeo.eye, new THREE.MeshBasicMaterial({ color: 0x111827 }));
+    eyeR.position.set(0.28, 4.7, 0.71);
+    npc.add(eyeR);
+
+    const hatBrim = new THREE.Mesh(_npcGeo.hatBrim, pal.hat);
+    hatBrim.position.y = 5.35;
+    npc.add(hatBrim);
+    const hatTop = new THREE.Mesh(_npcGeo.hat, pal.hat);
+    hatTop.position.y = 5.7;
+    npc.add(hatTop);
+
+    const seed = (i * 1597 + 13) >>> 0;
+    const rng = rngFromSeed(seed);
+    const centerR = 110 + rng() * 320;
+    const orbitR  = 8 + rng() * 32;
+    const startA  = rng() * Math.PI * 2;
+    npc.userData.path = {
+      cx: Math.cos(startA) * centerR,
+      cz: Math.sin(startA) * centerR,
+      r: orbitR,
+      phase: rng() * Math.PI * 2,
+      speed: (0.06 + rng() * 0.16) * (rng() < 0.5 ? 1 : -1),
+    };
+    npc.userData.limbs = { legL, legR, armL, armR };
+    NPCS.push(npc);
+    npcsGroup.add(npc);
+  }
+}
+
+function tickNPCs(t, dt){
+  if(!NPCS.length) return;
+  for(let i = 0; i < NPCS.length; i++){
+    const npc = NPCS[i];
+    const p = npc.userData.path;
+    p.phase += p.speed * dt;
+    const x = p.cx + Math.cos(p.phase) * p.r;
+    const z = p.cz + Math.sin(p.phase) * p.r;
+    const bounce = Math.abs(Math.sin(t * 3.6 + i * 0.6));
+    npc.position.set(x, bounce * 0.22, z);
+    npc.rotation.y = -p.phase + (p.speed > 0 ? -Math.PI / 2 : Math.PI / 2);
+    const swing = Math.sin(t * 3.6 + i * 0.6);
+    const l = npc.userData.limbs;
+    if(l){
+      l.legL.rotation.x = swing * 0.6;
+      l.legR.rotation.x = -swing * 0.6;
+      l.armL.rotation.x = -swing * 0.5;
+      l.armR.rotation.x = swing * 0.5;
+    }
+  }
+}
+
+const CAR_COLORS = [0xef4444, 0x3b82f6, 0xfbbf24, 0xfb923c, 0x10b981, 0xc084fc, 0x00f5d4, 0xff006e];
+const _carMats = CAR_COLORS.map(c => ({
+  body: new THREE.MeshBasicMaterial({ color: c }),
+  roof: new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(0.65) }),
+}));
+const _carShared = {
+  win:   new THREE.MeshBasicMaterial({ color: 0x111827 }),
+  wheel: new THREE.MeshBasicMaterial({ color: 0x0a0a0f }),
+  head:  new THREE.MeshBasicMaterial({ color: 0xfffacd }),
+  tail:  new THREE.MeshBasicMaterial({ color: 0xef4444 }),
+};
+const _carGeo = {
+  body:  new THREE.BoxGeometry(2.4, 0.95, 4.6),
+  roof:  new THREE.BoxGeometry(1.9, 0.85, 2.6),
+  win:   new THREE.BoxGeometry(1.95, 0.6, 2.55),
+  wheel: new THREE.BoxGeometry(0.55, 0.7, 0.85),
+  head:  new THREE.BoxGeometry(2.05, 0.3, 0.15),
+  tail:  new THREE.BoxGeometry(2.05, 0.28, 0.15),
+};
+
+function makeCar(idx){
+  const g = new THREE.Group();
+  const pal = _carMats[idx % _carMats.length];
+  const body = new THREE.Mesh(_carGeo.body, pal.body); body.position.y = 0.55; g.add(body);
+  const roof = new THREE.Mesh(_carGeo.roof, pal.roof); roof.position.set(0, 1.42, -0.2); g.add(roof);
+  const win  = new THREE.Mesh(_carGeo.win,  _carShared.win); win.position.set(0, 1.43, -0.2); g.add(win);
+  for (let s = 0; s < 4; s++) {
+    const w = new THREE.Mesh(_carGeo.wheel, _carShared.wheel);
+    w.position.set((s % 2 === 0 ? 1.18 : -1.18), 0.35, (s < 2 ? 1.45 : -1.45));
+    g.add(w);
+  }
+  const head = new THREE.Mesh(_carGeo.head, _carShared.head); head.position.set(0, 0.85, 2.35); g.add(head);
+  const tail = new THREE.Mesh(_carGeo.tail, _carShared.tail); tail.position.set(0, 0.85, -2.35); g.add(tail);
+  return g;
+}
+
+function buildCars(){
+  if (!carsGroup) return;
+  CARS = [];
+  const LANE = 2.0;
+
+  for (let i = 0; i < ROAD_RADIALS; i++) {
+    const angle = (i / ROAD_RADIALS) * Math.PI * 2;
+    const perpX = -Math.sin(angle), perpZ = Math.cos(angle);
+    for (const dirSign of [1, -1]) {
+      for (let k = 0; k < 2; k++) {
+        const car = makeCar((i * 4 + k) + (dirSign > 0 ? 0 : 7));
+        const r = RADIAL_INNER_R + 20 + Math.random() * (370 - RADIAL_INNER_R - 40);
+        const sideOff = dirSign * LANE;
+        car.userData.path = {
+          type: "radial",
+          angle, perpX, perpZ,
+          r, rMin: RADIAL_INNER_R + 6, rMax: 400,
+          dirSign,
+          sideOff,
+          speed: 8 + Math.random() * 6,
+        };
+        carsGroup.add(car);
+        CARS.push(car);
+      }
+    }
+  }
+
+  ROAD_RINGS_R.forEach((ringR, i) => {
+    const cars = 4 + Math.floor(i / 2);
+    for (let k = 0; k < cars; k++) {
+      for (const dirSign of [1, -1]) {
+        const car = makeCar(i * 10 + k + (dirSign > 0 ? 0 : 5));
+        const sideOff = -dirSign * LANE;
+        car.userData.path = {
+          type: "ring",
+          ringR,
+          sideOff,
+          angle: (k / cars) * Math.PI * 2 + (dirSign > 0 ? 0 : Math.PI / cars),
+          dirSign,
+          speed: 0.04 + Math.random() * 0.03,
+        };
+        carsGroup.add(car);
+        CARS.push(car);
+      }
+    }
+  });
+}
+
+function tickCars(dt){
+  if (!CARS.length) return;
+  for (const car of CARS) {
+    const p = car.userData.path;
+    if (p.type === "radial") {
+      p.r += p.speed * p.dirSign * dt;
+      if (p.dirSign > 0 && p.r > p.rMax) p.r = p.rMin;
+      if (p.dirSign < 0 && p.r < p.rMin) p.r = p.rMax;
+      const cx = Math.cos(p.angle) * p.r + p.perpX * p.sideOff;
+      const cz = Math.sin(p.angle) * p.r + p.perpZ * p.sideOff;
+      car.position.set(cx, 0, cz);
+      car.rotation.y = (p.dirSign > 0 ? Math.PI / 2 : -Math.PI / 2) - p.angle;
+    } else {
+      p.angle += p.speed * p.dirSign * dt;
+      const effR = p.ringR + p.sideOff;
+      const cx = Math.cos(p.angle) * effR;
+      const cz = Math.sin(p.angle) * effR;
+      car.position.set(cx, 0, cz);
+      car.rotation.y = (p.dirSign > 0 ? 0 : Math.PI) - p.angle;
+    }
+  }
+}
+
+const LANDMARKS = [
+  { id: "bank",       x:  48, z:  48, label: "BANK · STAKE",   action: "stake",
+    hint: "stake your buildings",     ring: 0xfbbf24, beam: 0xfde047 },
+  { id: "playground", x:  68, z: -38, label: "PLAY & EARN · SOON",    action: "soon:Play & Earn",
+    hint: "play city dash (coming soon)", ring: 0xef4444, beam: 0xfca5a5 },
+  { id: "whitehouse", x: -68, z: -38, label: "GITLAWB",        action: "url:https://gitlawb.com",
+    hint: "visit gitlawb.com",        ring: 0xf5f5f5, beam: 0xffffff },
+  { id: "tokenplace", x: -48, z:  48, label: "TOKEN PLACE",    action: "url:https://bankr.bot",
+    hint: "buy $LAWBWORLD on bankr",  ring: 0xfde047, beam: 0xfff7c2 },
+  { id: "home",       x:   0, z:   0, label: "PROFILE",        action: "wallet",
+    hint: "your wallet profile",      ring: 0x00f5d4, beam: 0x86efac },
+];
+
+function makeLandmarkLabel(text, ringColor){
+  const c = document.createElement("canvas");
+  c.width = 512; c.height = 128;
+  const ctx = c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+
+  const hex = "#" + new THREE.Color(ringColor || 0x00f5d4).getHexString();
+  ctx.shadowColor = hex;
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = "rgba(6,9,18,0.92)";
+  ctx.fillRect(14, 24, c.width - 28, 80);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = hex;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(14, 24, c.width - 28, 80);
+  ctx.fillStyle = hex;
+  ctx.font = "bold 36px 'Silkscreen', 'Courier New', monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, c.width / 2, 64);
+  const tex = new THREE.CanvasTexture(c);
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearFilter;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+
+  mat.depthWrite = false;
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(38, 9.5, 1);
+  sprite.renderOrder = 999;
+  return sprite;
+}
+
+function buildBank(){
+  const g = new THREE.Group();
+
+  const plinth = new THREE.Mesh(
+    new THREE.BoxGeometry(20, 1.4, 16),
+    new THREE.MeshBasicMaterial({ color: 0x1a1f2b })
+  );
+  plinth.position.y = 0.7; g.add(plinth);
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(18, 10, 14),
+    new THREE.MeshBasicMaterial({ color: 0xe6dfc8 })
+  );
+  body.position.y = 1.4 + 5; g.add(body);
+
+  for (let i = 0; i < 6; i++) {
+    const col = new THREE.Mesh(
+      new THREE.BoxGeometry(1.2, 8, 1.2),
+      new THREE.MeshBasicMaterial({ color: 0xfafafa })
+    );
+    col.position.set(-7.5 + i * 3, 1.4 + 4, 7.4);
+    g.add(col);
+  }
+
+  for (let i = 0; i < 3; i++) {
+    const slab = new THREE.Mesh(
+      new THREE.BoxGeometry(18 - i * 5, 1.2, 14),
+      new THREE.MeshBasicMaterial({ color: 0xb9b2a0 })
+    );
+    slab.position.y = 1.4 + 10 + i * 1.2;
+    g.add(slab);
+  }
+
+  const vault = new THREE.Mesh(
+    new THREE.BoxGeometry(3.5, 5, 0.4),
+    new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
+  );
+  vault.position.set(0, 1.4 + 3, 7.6); g.add(vault);
+
+  const dot = new THREE.Mesh(
+    new THREE.BoxGeometry(0.6, 0.6, 0.3),
+    new THREE.MeshBasicMaterial({ color: 0xfde047 })
+  );
+  dot.position.set(0, 1.4 + 4.4, 7.85); g.add(dot);
+  g.userData.dims = { w: 20, h: 14.5, d: 16 };
+  return g;
+}
+
+function buildPlayground(){
+  const g = new THREE.Group();
+  const plinth = new THREE.Mesh(
+    new THREE.BoxGeometry(16, 0.8, 16),
+    new THREE.MeshBasicMaterial({ color: 0x0a3a14 })
+  );
+  plinth.position.y = 0.4; g.add(plinth);
+  const colors = [0xef4444, 0x3b82f6, 0xeab308, 0x10b981, 0x8b5cf6];
+
+  const placements = [
+    { x: -4, z: -2, w: 5, h: 4, d: 5, c: 0 },
+    { x:  4, z: -3, w: 4, h: 6, d: 4, c: 1 },
+    { x:  0, z:  4, w: 6, h: 3, d: 4, c: 2 },
+    { x: -3, z:  4, w: 3, h: 5, d: 3, c: 4 },
+  ];
+  placements.forEach(p => {
+    const block = new THREE.Mesh(
+      new THREE.BoxGeometry(p.w, p.h, p.d),
+      new THREE.MeshBasicMaterial({ color: colors[p.c] })
+    );
+    block.position.set(p.x, 0.8 + p.h/2, p.z);
+    g.add(block);
+  });
+
+  const slide = new THREE.Mesh(
+    new THREE.BoxGeometry(8, 0.5, 1.4),
+    new THREE.MeshBasicMaterial({ color: 0xeab308 })
+  );
+  slide.position.set(2, 3, -1);
+  slide.rotation.z = -Math.PI * 0.18;
+  g.add(slide);
+
+  const stick = new THREE.Mesh(
+    new THREE.BoxGeometry(0.4, 2, 0.4),
+    new THREE.MeshBasicMaterial({ color: 0x111827 })
+  );
+  stick.position.set(4, 0.8 + 6 + 1.4, -3); g.add(stick);
+  const ball = new THREE.Mesh(
+    new THREE.BoxGeometry(1.2, 1.2, 1.2),
+    new THREE.MeshBasicMaterial({ color: 0xef4444 })
+  );
+  ball.position.set(4, 0.8 + 6 + 2.8, -3);
+  ball.userData.blink = true; ball.userData.color = 0xef4444;
+  g.add(ball);
+  g.userData.dims = { w: 16, h: 12, d: 16 };
+  return g;
+}
+
+function buildWhiteHouse(){
+  const g = new THREE.Group();
+  const plinth = new THREE.Mesh(
+    new THREE.BoxGeometry(22, 1.2, 14),
+    new THREE.MeshBasicMaterial({ color: 0x1a1f2b })
+  );
+  plinth.position.y = 0.6; g.add(plinth);
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(20, 7, 12),
+    new THREE.MeshBasicMaterial({ color: 0xf5f5f5 })
+  );
+  body.position.y = 1.2 + 3.5; g.add(body);
+
+  const portico = new THREE.Mesh(
+    new THREE.BoxGeometry(8, 8.5, 4),
+    new THREE.MeshBasicMaterial({ color: 0xffffff })
+  );
+  portico.position.set(0, 1.2 + 4.25, 8); g.add(portico);
+
+  for (let i = 0; i < 4; i++) {
+    const col = new THREE.Mesh(
+      new THREE.BoxGeometry(0.9, 7.5, 0.9),
+      new THREE.MeshBasicMaterial({ color: 0xfafafa })
+    );
+    col.position.set(-3.2 + i * 2.1, 1.2 + 3.75, 9.8); g.add(col);
+  }
+
+  const domeLayers = [
+    { y: 1.2 + 7,   r: 4 },
+    { y: 1.2 + 8.4, r: 3 },
+    { y: 1.2 + 9.6, r: 2 },
+    { y: 1.2 + 10.6, r: 1 },
+  ];
+  domeLayers.forEach(l => {
+    const layer = new THREE.Mesh(
+      new THREE.BoxGeometry(l.r * 2, 1.4, l.r * 2),
+      new THREE.MeshBasicMaterial({ color: 0xeaeaea })
+    );
+    layer.position.y = l.y; g.add(layer);
+  });
+
+  const pole = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, 4, 0.2),
+    new THREE.MeshBasicMaterial({ color: 0x222222 })
+  );
+  pole.position.set(0, 1.2 + 12.5, 0); g.add(pole);
+  const flag = new THREE.Mesh(
+    new THREE.BoxGeometry(1.6, 1, 0.1),
+    new THREE.MeshBasicMaterial({ color: 0xff006e })
+  );
+  flag.position.set(0.9, 1.2 + 13.5, 0); g.add(flag);
+  g.userData.dims = { w: 22, h: 14, d: 14 };
+  return g;
+}
+
+function buildTokenPlace(){
+  const g = new THREE.Group();
+  const plinth = new THREE.Mesh(
+    new THREE.BoxGeometry(12, 1, 12),
+    new THREE.MeshBasicMaterial({ color: 0x2a1a05 })
+  );
+  plinth.position.y = 0.5; g.add(plinth);
+
+  for (let i = 0; i < 6; i++) {
+    const size = 7 - i * 0.5;
+    const coin = new THREE.Mesh(
+      new THREE.BoxGeometry(size, 1.2, size),
+      new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? 0xfbbf24 : 0xf59e0b })
+    );
+    coin.position.y = 1 + i * 1.4 + 0.6;
+    g.add(coin);
+
+    const rim = new THREE.Mesh(
+      new THREE.BoxGeometry(size + 0.3, 0.3, size + 0.3),
+      new THREE.MeshBasicMaterial({ color: 0xfde047 })
+    );
+    rim.position.y = coin.position.y + 0.6;
+    g.add(rim);
+  }
+
+  const dollar = new THREE.Mesh(
+    new THREE.BoxGeometry(2.2, 2.2, 2.2),
+    new THREE.MeshBasicMaterial({ color: 0xfde047 })
+  );
+  dollar.position.y = 1 + 6 * 1.4 + 2;
+  dollar.userData.blink = true;
+  dollar.userData.color = 0xfde047;
+  g.add(dollar);
+  g.userData.dims = { w: 12, h: 14, d: 12 };
+  return g;
+}
+
+function buildHome(){
+  const g = new THREE.Group();
+
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(8, 5, 8),
+    new THREE.MeshBasicMaterial({ color: 0x7c5634 })
+  );
+  base.position.y = 2.5; g.add(base);
+
+  const roofLayers = [
+    { w: 9, h: 1.2 },
+    { w: 7, h: 1.2 },
+    { w: 5, h: 1.2 },
+    { w: 3, h: 1.0 },
+    { w: 1.4, h: 0.8 },
+  ];
+  let ry = 5;
+  roofLayers.forEach(l => {
+    const r = new THREE.Mesh(
+      new THREE.BoxGeometry(l.w, l.h, 9),
+      new THREE.MeshBasicMaterial({ color: 0x9a1a1a })
+    );
+    r.position.y = ry + l.h/2;
+    g.add(r);
+    ry += l.h;
+  });
+
+  const door = new THREE.Mesh(
+    new THREE.BoxGeometry(1.6, 3, 0.3),
+    new THREE.MeshBasicMaterial({ color: 0x3a1e0d })
+  );
+  door.position.set(0, 1.5, 4.1); g.add(door);
+
+  for (let s = -1; s <= 1; s += 2) {
+    const win = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, 1.4, 0.2),
+      new THREE.MeshBasicMaterial({ color: 0x60a5fa })
+    );
+    win.position.set(s * 2.4, 3, 4.1);
+    win.userData.blink = true; win.userData.color = 0x60a5fa;
+    g.add(win);
+  }
+
+  const chim = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 2.2, 1),
+    new THREE.MeshBasicMaterial({ color: 0x4a2a14 })
+  );
+  chim.position.set(2.2, ry + 1, 0); g.add(chim);
+  g.userData.dims = { w: 9, h: ry + 2, d: 9 };
+  return g;
+}
+
+const LANDMARK_BUILDERS = {
+  bank:       buildBank,
+  playground: buildPlayground,
+  whitehouse: buildWhiteHouse,
+  tokenplace: buildTokenPlace,
+  home:       buildHome,
+};
+
+function buildLandmarks(){
+  if (!landmarksGroup) return;
+  LANDMARKS.forEach(L => {
+    const fn = LANDMARK_BUILDERS[L.id];
+    if (!fn) return;
+    const inner = fn();
+
+    const SCALE = 2.0;
+    inner.scale.set(SCALE, SCALE, SCALE);
+    const innerDims = inner.userData.dims || { w: 10, h: 12, d: 10 };
+    const scaledH = innerDims.h * SCALE;
+    const scaledW = innerDims.w * SCALE;
+    const scaledD = innerDims.d * SCALE;
+
+    const g = new THREE.Group();
+    g.position.set(L.x, 0, L.z);
+    g.userData.landmark = L;
+    g.userData.dims = { w: scaledW, h: scaledH, d: scaledD };
+
+    const pedW = Math.max(scaledW, scaledD) * 0.9 + 6;
+    const pedestal = new THREE.Mesh(
+      new THREE.BoxGeometry(pedW, 1.6, pedW),
+      new THREE.MeshBasicMaterial({ color: 0x0e1424 })
+    );
+    pedestal.position.y = 0.8;
+    g.add(pedestal);
+
+    const ring = new THREE.Mesh(
+      new THREE.BoxGeometry(pedW + 0.6, 0.35, pedW + 0.6),
+      new THREE.MeshBasicMaterial({ color: L.ring || 0x00f5d4 })
+    );
+    ring.position.y = 1.6;
+    g.add(ring);
+
+    const haloGeo = new THREE.RingGeometry(pedW * 0.55, pedW * 1.1, 32);
+    const halo = new THREE.Mesh(haloGeo, new THREE.MeshBasicMaterial({
+      color: L.ring || 0x00f5d4,
+      transparent: true,
+      opacity: 0.18,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    }));
+    halo.rotation.x = -Math.PI / 2;
+    halo.position.y = 0.03;
+    halo.userData.aura = true;
+    g.add(halo);
+
+    inner.position.y = 1.6;
+    g.add(inner);
+
+    const beamH = scaledH + 60;
+    const beam = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, beamH, 1.6),
+      new THREE.MeshBasicMaterial({
+        color: L.beam || 0xffffff,
+        transparent: true,
+        opacity: 0.32,
+        depthWrite: false,
+      })
+    );
+    beam.position.y = 1.6 + beamH / 2;
+    beam.userData.aura = true;
+    g.add(beam);
+
+    const beamOuter = new THREE.Mesh(
+      new THREE.BoxGeometry(4.8, beamH, 4.8),
+      new THREE.MeshBasicMaterial({
+        color: L.beam || 0xffffff,
+        transparent: true,
+        opacity: 0.07,
+        depthWrite: false,
+      })
+    );
+    beamOuter.position.y = 1.6 + beamH / 2;
+    g.add(beamOuter);
+
+    for (let k = 0; k < 3; k++) {
+      const orb = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 0.6, 0.6),
+        new THREE.MeshBasicMaterial({ color: L.beam || 0xffffff })
+      );
+      orb.userData.orbit = {
+        radius: scaledW * 0.6 + 2,
+        phase: (k * Math.PI * 2) / 3,
+        speed: 0.7,
+        y: scaledH + 2 + Math.sin(k) * 0.6,
+      };
+      g.add(orb);
+    }
+
+    const label = makeLandmarkLabel(L.label, L.ring);
+    label.position.set(0, scaledH + 10, 0);
+    g.add(label);
+
+    landmarksGroup.add(g);
+  });
+}
+
+function renderPeers(){
+
+  renderPeerList();
+  if(!towersGroup) return;
+  while(towersGroup.children.length) towersGroup.remove(towersGroup.children[0]);
+  PEERS.forEach((p) => {
+    const tower = buildPeerTower(p);
+    if(tower){
+      tower.position.set(p.x || 0, 0, p.z || 0);
+      towersGroup.add(tower);
+    }
+  });
+}
+
+let camYaw = Math.PI*0.25, camPitch = 0.55, camDist = 320;
+let dragging = false, lastX = 0, lastY = 0, dragStarted = false;
+
+function initCameraControls(){
+  STAGE.addEventListener("mousedown", e => {
+    if(e.button !== 0) return;
+    dragging = true; lastX = e.clientX; lastY = e.clientY;
+    dragStarted = false;
+  });
+  window.addEventListener("mouseup", () => { dragging = false; });
+  window.addEventListener("mousemove", e => {
+    if(!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    if(Math.abs(dx)+Math.abs(dy) > 3) dragStarted = true;
+    camYaw -= dx * 0.005;
+    camPitch = Math.max(0.15, Math.min(1.35, camPitch - dy*0.004));
+    lastX = e.clientX; lastY = e.clientY;
+    updateCompass();
+  });
+  STAGE.addEventListener("wheel", e => {
+    camDist = Math.max(40, Math.min(700, camDist + e.deltaY*0.15));
+    e.preventDefault();
+  }, {passive:false});
+  let touchStartDist = 0;
+  STAGE.addEventListener("touchstart", e => {
+    if(e.touches.length === 1){
+      dragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+      dragStarted = false;
+    } else if(e.touches.length === 2){
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      touchStartDist = Math.hypot(dx,dy);
+    }
+  }, {passive:true});
+  STAGE.addEventListener("touchmove", e => {
+    if(e.touches.length === 1 && dragging){
+      const dx = e.touches[0].clientX - lastX, dy = e.touches[0].clientY - lastY;
+      if(Math.abs(dx)+Math.abs(dy)>3) dragStarted = true;
+      camYaw -= dx*0.005;
+      camPitch = Math.max(0.15, Math.min(1.35, camPitch - dy*0.004));
+      lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+      updateCompass();
+    } else if(e.touches.length === 2){
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const d = Math.hypot(dx,dy);
+      camDist = Math.max(25, Math.min(520, camDist + (touchStartDist - d)*0.3));
+      touchStartDist = d;
+    }
+  }, {passive:true});
+  STAGE.addEventListener("touchend", () => { dragging = false; });
+}
+
+function updateCompass(){
+  const needle = document.getElementById("compassNeedle");
+  if(needle) needle.style.transform = `rotate(${-camYaw}rad)`;
+}
+
+function onMouseMove(e){
+  const rect = STAGE.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width)*2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height)*2 + 1;
+}
+function onClick(){
+  if(dragStarted) return;
+  raycaster.setFromCamera(mouse, camera);
+
+  const landmarkHits = raycaster.intersectObjects(landmarksGroup.children, true);
+  if (landmarkHits.length) {
+    let g = landmarkHits[0].object;
+    while (g && !g.userData.landmark) g = g.parent;
+    if (g) {
+      handleLandmarkClick(g.userData.landmark);
+      return;
+    }
+  }
+  const hits = raycaster.intersectObjects(buildingsGroup.children, true);
+  if(hits.length){
+    let g = hits[0].object;
+    while(g && !g.userData.repo) g = g.parent;
+    if(g) selectBuilding(g);
+  }
+}
+
+function handleLandmarkClick(L){
+  if (L.action && L.action.startsWith("soon:")) {
+    toast(`▌ ${L.action.slice(5)} · COMING SOON`, "gold");
+    return;
+  }
+  toast(`▌ ${L.label} · ${L.hint}`, "gold");
+  if (L.action === "stake")  return openModal("stake-modal");
+  if (L.action === "arcade") return openModal("arcade-modal");
+  if (L.action === "wallet") return openWalletModal();
+  if (L.action && L.action.startsWith("url:")) {
+    window.open(L.action.slice(4), "_blank", "noopener");
+    return;
+  }
+}
+
+function loadWalletProfile(){
+  let p = {};
+  try { p = JSON.parse(localStorage.getItem("lawb_wallet_profile") || "{}"); } catch(_){}
+  const addr = STATE.walletAddrFull || "0x000000";
+  return {
+    username: p.username || ("Citizen_" + addr.slice(2,6).toUpperCase()),
+    avatar: p.avatar || null,
+  };
+}
+function saveWalletProfile(p){
+  try { localStorage.setItem("lawb_wallet_profile", JSON.stringify(p)); } catch(_){}
+}
+function defaultAvatar(seedStr){
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const ctx = c.getContext("2d");
+  let h = 2166136261 >>> 0;
+  for(let i = 0; i < seedStr.length; i++){ h ^= seedStr.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  const rng = () => { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967295; };
+  const palette = ["#fbbf24","#00f5d4","#c084fc","#38bdf8","#ff006e","#34d399","#ef4444","#fb923c"];
+  const bg = palette[Math.floor(rng() * palette.length)];
+  ctx.fillStyle = "#0a0e1a"; ctx.fillRect(0,0,64,64);
+  for(let y = 0; y < 8; y++){
+    for(let x = 0; x < 4; x++){
+      if(rng() < 0.55){
+        ctx.fillStyle = bg;
+        ctx.fillRect(x * 8, y * 8, 8, 8);
+        ctx.fillRect((7 - x) * 8, y * 8, 8, 8);
+      }
+    }
+  }
+  return c.toDataURL();
+}
+
+function openWalletModal(){
+  let modal = document.getElementById("wallet-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "wallet-modal";
+    modal.className = "modal-backdrop";
+    modal.innerHTML = `
+      <div class="modal wide">
+        <div class="modal-head">
+          <div class="modal-title">🏠 PROFILE · WALLET</div>
+          <button class="modal-close" data-close>ESC</button>
+        </div>
+        <div class="modal-body" id="walletModalBody"></div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener("click", e => { if (e.target === modal) modal.classList.remove("open"); });
+    modal.querySelector("[data-close]").addEventListener("click", () => modal.classList.remove("open"));
+  }
+  const body = modal.querySelector("#walletModalBody");
+  if (!LawbWallet.address) {
+    body.innerHTML = `<div class="empty-state">▌ WALLET NOT CONNECTED<br><br><button class="btn-mint" id="walletModalConnect">CONNECT WALLET</button></div>`;
+    body.querySelector("#walletModalConnect").addEventListener("click", async () => {
+      try { await LawbWallet.connect(); await refreshWalletBalances(); updateWalletChip(); openWalletModal(); }
+      catch (e) { toast(e.message, "error"); }
+    });
+    modal.classList.add("open");
+    return;
+  }
+  const me = LawbWallet.address.toLowerCase();
+  const owned = STATE.repos.filter(r => r.minted && r.owner && r.owner.toLowerCase() === me);
+  const profile = loadWalletProfile();
+  const avatarSrc = profile.avatar || defaultAvatar(STATE.walletAddrFull);
+
+  body.innerHTML = `
+    <div class="wallet-head">
+      <label class="wallet-avatar" title="click to change avatar">
+        <img src="${avatarSrc}" alt="avatar" id="walletAvatarImg" />
+        <input type="file" id="walletAvatarInput" accept="image/*" hidden />
+      </label>
+      <div class="wallet-id">
+        <div class="wallet-username">
+          <input id="walletUsername" type="text" value="${escapeHtml(profile.username)}" maxlength="24" />
+          <button class="btn-save" id="walletSaveUsername" title="save">✓</button>
+        </div>
+        <div class="wallet-addr-full" id="walletAddrFull" title="click to copy">${STATE.walletAddrFull}</div>
+      </div>
+    </div>
+    <div class="wallet-balances">
+      <div class="bal-card">
+        <div class="bal-k">ETH BALANCE</div>
+        <div class="bal-v" style="color:var(--accent);">${(STATE.walletBalETH ?? 0).toFixed(4)} <span style="font-size:9px;color:var(--text-muted);">ETH</span></div>
+      </div>
+      <div class="bal-card">
+        <div class="bal-k">$LAWBWORLD</div>
+        <div class="bal-v" style="color:var(--gold);">${STATE.walletBalLAWB}</div>
+      </div>
+      <div class="bal-card">
+        <div class="bal-k">NFTs OWNED</div>
+        <div class="bal-v" style="color:var(--text);">${owned.length}<span style="font-size:9px;color:var(--text-muted);"> / ${STATE.repos.length}</span></div>
+      </div>
+    </div>
+    <div class="wallet-actions">
+      <a class="btn-secondary" href="https://bankr.bot" target="_blank" rel="noopener">+ BUY $LAWBWORLD ON BANKR</a>
+      <a class="btn-secondary" href="/discover">▶ DISCOVER & MINT MORE</a>
+    </div>
+    <div class="wallet-section-title">▌ NFT INVENTORY · ${owned.length}</div>
+    ${owned.length === 0
+      ? `<div class="empty-state">▌ NO MINTS YET<br><br>CLICK ANY BUILDING<br>IN THE CITY TO MINT</div>`
+      : `<div class="wallet-grid">${owned.slice(0, 24).map(r => {
+          const thumb = r.artThumbUrl || r.imageUrl || r.artUrl || "";
+          const lvl = r.level || 1;
+          const atMax = lvl >= 10;
+          const cells = Array.from({length:10}, (_,i)=>`<div class="nft-cell ${i<lvl?'filled':''}"></div>`).join("");
+          return `
+            <div class="nft-card" style="border-color:${r.rarity.color}33;">
+              <a href="/mint?id=${encodeURIComponent(r.fullId)}" style="text-decoration:none;color:inherit;">
+                <div class="nft-art">${thumb ? `<img src="${escapeHtml(thumb)}" loading="lazy" />` : ""}</div>
+                <div class="nft-meta">
+                  <div class="nft-name">${escapeHtml(r.name)}</div>
+                  <div class="nft-row">
+                    <span style="color:${r.rarity.color}">${r.rarity.name}</span>
+                    <span style="color:var(--gold);">L${lvl}/10</span>
+                  </div>
+                  <div class="nft-level-bar">${cells}</div>
+                </div>
+              </a>
+              <button class="nft-upgrade" data-up="${escapeHtml(r.fullId)}" ${atMax ? 'disabled' : ''}>${atMax ? "MAXED" : `⬆ LEVEL UP → L${lvl+1}`}</button>
+            </div>`;
+        }).join("")}</div>
+        ${owned.length > 24 ? `<div style="text-align:center;font-family:var(--pixel);font-size:8px;color:var(--text-muted);margin-top:10px;">… and ${owned.length - 24} more</div>` : ""}`
+    }
+  `;
+
+  body.querySelectorAll("[data-up]").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const fullId = btn.dataset.up;
+      const repo = STATE.repos.find(r => r.fullId === fullId);
+      if (!repo) return;
+      btn.disabled = true; btn.textContent = "▌ UPGRADING…";
+      try {
+        const r = await LawbWallet.upgrade(fullId, (pct, status) => {
+          btn.textContent = "▌ " + status.toUpperCase();
+        });
+        repo.level = (repo.level || 1) + 1;
+        await refreshWalletBalances();
+        updateWalletChip();
+        toast(`✓ LEVELED UP · ${repo.name} → L${repo.level}`, "gold");
+        openWalletModal();
+      } catch (err) {
+        toast(err.shortMessage || err.message || "upgrade failed", "error");
+        btn.disabled = (repo.level || 1) >= 10;
+        btn.textContent = btn.disabled ? "MAXED" : `⬆ LEVEL UP → L${(repo.level||1)+1}`;
+      }
+    });
+  });
+
+  const avatarInput = body.querySelector("#walletAvatarInput");
+  body.querySelector(".wallet-avatar").addEventListener("click", () => avatarInput.click());
+  avatarInput.addEventListener("change", e => {
+    const f = e.target.files?.[0];
+    if(!f) return;
+    if(f.size > 1024 * 1024){ toast("avatar too big (1 MB max)", "error"); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const url = ev.target.result;
+      const cur = loadWalletProfile();
+      cur.avatar = url;
+      saveWalletProfile(cur);
+      body.querySelector("#walletAvatarImg").src = url;
+      toast("✓ avatar updated", "gold");
+    };
+    reader.readAsDataURL(f);
+  });
+
+  body.querySelector("#walletSaveUsername").addEventListener("click", () => {
+    const input = body.querySelector("#walletUsername");
+    const cur = loadWalletProfile();
+    cur.username = (input.value || "").trim() || cur.username;
+    saveWalletProfile(cur);
+    toast("✓ username saved", "gold");
+  });
+  body.querySelector("#walletAddrFull").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(STATE.walletAddrFull); toast("✓ address copied", "gold"); } catch(_){}
+  });
+
+  modal.classList.add("open");
+}
+
+function selectBuilding(g){
+  STATE.selected = g;
+  showProfile(g.userData.repo, g);
+  if(highlightOutline){
+    highlightOutline.parent && highlightOutline.parent.remove(highlightOutline);
+    highlightOutline = null;
+  }
+  const dims = g.userData.dims;
+  const oGeo = new THREE.BoxGeometry(dims.w*1.08, dims.h*1.04, dims.d*1.08);
+  const oMat = new THREE.MeshBasicMaterial({color:0x00f5d4, wireframe:true, transparent:true, opacity:0.5});
+  const o = new THREE.Mesh(oGeo, oMat);
+  o.position.y = dims.h/2;
+  o.userData.outline = true;
+  g.add(o);
+  highlightOutline = o;
+}
+
+let __animT = 0, __lastFrame = performance.now();
+function animate(){
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - __lastFrame) / 1000);
+  __lastFrame = now;
+  __animT += 0.016;
+  tickMatrixRain(dt);
+  tickNPCs(__animT, dt);
+  tickCars(dt);
+
+  camera.position.x = Math.cos(camYaw)*Math.cos(camPitch)*camDist;
+  camera.position.z = Math.sin(camYaw)*Math.cos(camPitch)*camDist;
+  camera.position.y = Math.sin(camPitch)*camDist + 4;
+  camera.lookAt(0, 8, 0);
+
+  towersGroup.children.forEach((tow, i) => {
+    const light = tow.userData.light;
+    if(light){
+      const phase = (Math.sin(__animT*2 + i)*0.5+0.5);
+      light.material.color = new THREE.Color(light.userData.color).multiplyScalar(0.4 + phase*0.6);
+    }
+  });
+
+  buildingsGroup.children.forEach((b, i) => {
+    b.traverse(obj => {
+      if(obj.userData.blink && obj.material){
+        const phase = (Math.sin(__animT*3 + i)*0.5+0.5);
+        obj.material.opacity = 0.4 + phase*0.6;
+        obj.material.transparent = true;
+      }
+      if(obj.userData.rotate){ obj.rotation.z += 0.01; }
+      if(obj.userData.orbit){
+        const od = obj.userData.orbit;
+        obj.position.x = Math.cos(__animT*od.speed + od.phase) * od.radius;
+        obj.position.z = Math.sin(__animT*od.speed + od.phase) * od.radius;
+        obj.position.y = od.y + Math.sin(__animT*2 + od.phase)*0.3;
+      }
+      if(obj.userData.flag){
+        obj.position.y += Math.sin(__animT*2 + i)*0.005;
+        obj.rotation.y = Math.sin(__animT*1.5 + i)*0.3;
+      }
+      if(obj.userData.aura){
+        obj.material.opacity = 0.4 + (Math.sin(__animT*2 + i)*0.5+0.5)*0.4;
+      }
+      if(obj.userData.outline){
+        obj.material.opacity = 0.3 + (Math.sin(__animT*4)*0.5+0.5)*0.4;
+      }
+    });
+  });
+
+  if(starsMesh) starsMesh.rotation.y += 0.00015;
+  renderer.render(scene, camera);
+}
+
+function showProfile(repo, mesh){
+  const el = document.getElementById("profile");
+  document.getElementById("profName").textContent = repo.name;
+  const ownerEl = document.getElementById("profOwner");
+  ownerEl.textContent = "@" + repo.did.slice(0,10);
+  ownerEl.href = `https://gitlawb.com/node/repos/${repo.did}/${repo.name}`;
+  document.getElementById("profDesc").innerHTML = `<strong>${repo.fullId}</strong><br>${repo.desc}`;
+  document.getElementById("profLevel").textContent = `${repo.level} / 10`;
+  const rEl = document.getElementById("profRarity");
+  rEl.textContent = repo.rarity.name;
+  rEl.style.color = repo.rarity.color;
+  document.getElementById("profSize").textContent = formatSize(repo.fileSizeKB);
+  document.getElementById("profTokenId").textContent = "#" + repo.tokenId;
+  document.getElementById("profStars").textContent = repo.stars;
+  document.getElementById("profVisits").textContent = repo.visits;
+
+  const avatar = document.getElementById("profAvatar");
+  avatar.style.background = repo.rarity.color;
+  avatar.style.color = "#001110";
+  avatar.style.boxShadow = `0 0 0 2px #001110, 0 0 24px ${repo.rarity.color}`;
+  avatar.textContent = repo.name[0].toUpperCase();
+
+  const status = document.getElementById("profStatus");
+  if(repo.minted){
+    status.textContent = "▌ MINTED · OWNED";
+    status.classList.add("minted");
+  } else {
+    status.textContent = "▌ AVAILABLE";
+    status.classList.remove("minted");
+  }
+
+  const btn = document.getElementById("btnMint");
+  if(repo.minted){
+    if(repo.owner === STATE.walletAddrFull || repo.owner === STATE.walletAddr){
+      btn.textContent = "✓ OWNED BY YOU";
+      btn.classList.add("owned");
+      btn.disabled = false;
+      btn.onclick = () => openModal("upgrade-modal");
+    } else {
+      const short = repo.owner ? repo.owner.slice(0,6) + "…" : "unknown";
+      btn.textContent = `OWNED BY ${short}`;
+      btn.classList.add("owned");
+      btn.disabled = true;
+    }
+  } else {
+    btn.textContent = LawbWallet.address ? "▶ MINT — 0.00028 ETH" : "▶ CONNECT WALLET TO MINT";
+    btn.classList.remove("owned");
+    btn.disabled = false;
+    btn.onclick = () => mintRepo(repo, mesh);
+  }
+
+  document.getElementById("btnVisitRepo").onclick = () => {
+    window.open(`https://gitlawb.com/node/repos/${repo.did}/${repo.name}`, "_blank");
+  };
+
+  renderNftArt(repo);
+
+  el.classList.add("open");
+}
+
+function renderNftArt(repo){
+  const frame = document.getElementById("profArtFrame");
+  const placeholder = document.getElementById("profArtPlaceholder");
+  const btn = document.getElementById("btnGenArt");
+  if(!frame || !btn) return;
+  frame.querySelectorAll("img").forEach(n => n.remove());
+
+  const url = repo.imageUrl || repo.artUrl;
+  if(url){
+    placeholder.style.display = "none";
+    const img = document.createElement("img");
+    img.alt = `NFT art for ${repo.name}`;
+    img.src = url;
+    img.onerror = () => {
+      placeholder.style.display = "block";
+      placeholder.innerHTML = `▌ ART NOT YET GENERATED<br><br><span style="color:var(--text-dim);font-size:8px;">run: node server/scripts/generate-art.js</span>`;
+      img.remove();
+    };
+    frame.appendChild(img);
+    btn.textContent = repo.minted ? "✓ NFT ART · MINTED" : "✨ MINT TO CLAIM THIS ART";
+    btn.disabled = true;
+  } else {
+    placeholder.style.display = "block";
+    placeholder.innerHTML = `▌ ART LIBRARY EMPTY<br><br><span style="color:var(--text-dim);font-size:8px;">run: node server/scripts/generate-art.js</span>`;
+    btn.textContent = "ART NOT YET GENERATED";
+    btn.disabled = true;
+  }
+  btn.onclick = null;
+}
+
+function closeProfile(){
+  document.getElementById("profile").classList.remove("open");
+  if(highlightOutline && highlightOutline.parent){
+    highlightOutline.parent.remove(highlightOutline);
+    highlightOutline = null;
+  }
+  STATE.selected = null;
+}
+
+document.getElementById("profileClose").addEventListener("click", closeProfile);
+
+function showMintProgress(name, pct, status){
+  const el = document.getElementById("mintProgress");
+  if(!el) return;
+  el.hidden = false;
+  document.getElementById("mintProgressName").textContent = name;
+  document.getElementById("mintProgressFill").style.width = pct + "%";
+  document.getElementById("mintProgressStatus").textContent = "▌ " + status;
+}
+function hideMintProgress(){
+  const el = document.getElementById("mintProgress");
+  if(el) el.hidden = true;
+}
+document.getElementById("mintProgressClose")?.addEventListener("click", hideMintProgress);
+
+async function mintRepo(repo, mesh){
+  if(repo.minted){ toast("Already minted", "error"); return; }
+  if(!LawbWallet.address){
+    try { await LawbWallet.connect(); await refreshWalletBalances(); updateWalletChip(); }
+    catch (e) { toast(e.message || "connect failed", "error"); return; }
+  }
+  try {
+    const r = await LawbWallet.mint(repo.fullId, (pct, status) => {
+      showMintProgress(repo.name, pct, status);
+    });
+    repo.minted = true;
+    repo.owner = LawbWallet.address;
+    repo.level = 1;
+    await refreshWalletBalances();
+    updateWalletChip();
+    addMintAura(mesh, repo, mesh.userData.dims.w, mesh.userData.dims.d, mesh.userData.dims.h);
+    showProfile(repo, mesh);
+    updateStats();
+    refreshLeaderboard();
+    toast(`✓ MINTED · ${repo.name} · ${r.tx.slice(0,10)}…`, "gold");
+    setTimeout(hideMintProgress, 2400);
+  } catch (e) {
+    hideMintProgress();
+    toast(e.shortMessage || e.message || "mint failed", "error");
+  }
+}
+
+function updateStats(){
+  document.getElementById("statRepos").textContent = STATE.repos.length.toString();
+  document.getElementById("statMinted").textContent = STATE.repos.filter(r=>r.minted).length.toString();
+
+  const counts = {0:0,1:0,2:0,3:0,4:0};
+  STATE.repos.forEach(r => counts[r.rarity.tier]++);
+  document.getElementById("cntCommon").textContent = counts[0];
+  document.getElementById("cntUncommon").textContent = counts[1];
+  document.getElementById("cntRare").textContent = counts[2];
+  document.getElementById("cntEpic").textContent = counts[3];
+  document.getElementById("cntLegendary").textContent = counts[4];
+}
+
+function renderPeerList(){
+  const list = document.getElementById("peerList");
+  if(!list) return;
+  list.innerHTML = "";
+  PEERS.forEach(p => {
+    const cls = p.status === "reachable" ? "pulse"
+              : p.status === "warn"      ? "pulse warn" : "pulse unreach";
+    const row = document.createElement("div");
+    row.className = "peer-row";
+    row.innerHTML = `
+      <span class="${cls}"></span>
+      <div class="peer-info">
+        <div class="peer-did">${p.did}…</div>
+        <div class="peer-meta">${p.url.replace("https://","")} · ${p.lastSeen}</div>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+let toastTimer;
+function toast(msg, kind){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "show " + (kind==="error"?"error":kind==="gold"?"gold":"");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ""; }, 2400);
+}
+
+function openModal(id){
+  document.getElementById(id).classList.add("open");
+  if(id === "leaderboard-modal") refreshLeaderboard();
+  if(id === "upgrade-modal") refreshUpgrade();
+  if(id === "arcade-modal") setTimeout(initArcade, 50);
+}
+function closeAllModals(){
+  document.querySelectorAll(".modal-backdrop").forEach(m => m.classList.remove("open"));
+}
+document.querySelectorAll("[data-modal]").forEach(b => {
+  b.addEventListener("click", () => openModal(b.dataset.modal));
+});
+document.getElementById("navProfile")?.addEventListener("click", () => openWalletModal());
+document.getElementById("walletChip")?.addEventListener("click", () => openWalletModal());
+document.getElementById("navArcade")?.addEventListener("click", () => toast("▌ ARCADE · COMING SOON", "gold"));
+document.querySelectorAll(".modal-backdrop").forEach(b => {
+  b.addEventListener("click", e => { if(e.target === b) closeAllModals(); });
+});
+document.querySelectorAll("[data-close]").forEach(b => {
+  b.addEventListener("click", closeAllModals);
+});
+window.addEventListener("keydown", e => {
+  if(e.key === "Escape"){ closeAllModals(); closeProfile(); }
+});
+
+document.querySelectorAll("[data-action]").forEach(b => {
+  b.addEventListener("click", () => {
+    const a = b.dataset.action;
+    if(a === "discover"){
+
+      window.location.href = "/discover";
+    } else if(a === "stake") openModal("stake-modal");
+    else if(a === "gift") openModal("gift-modal");
+    else if(a === "battle") openModal("battle-modal");
+    else if(a === "arcade") toast("▌ ARCADE · COMING SOON", "gold");
+    else if(a === "upgrade") openModal("upgrade-modal");
+    else if(a === "leaderboard") openModal("leaderboard-modal");
+  });
+});
+
+document.querySelectorAll(".act-btn").forEach(b => {
+  b.addEventListener("click", () => {
+    const a = b.dataset.act;
+    if(a === "upgrade") openModal("upgrade-modal");
+    else if(a === "stake") openModal("stake-modal");
+    else if(a === "gift") openModal("gift-modal");
+    else if(a === "battle") openModal("battle-modal");
+  });
+});
+
+const DISCOVER = { tier: "all", q: "", maxRender: 400 };
+
+function renderDiscoverList(){
+  const list = document.getElementById("discoverList");
+  const meta = document.getElementById("discCount");
+  const src  = document.getElementById("discSource");
+  const total = document.getElementById("discTotalRepos");
+  if(!list) return;
+  total.textContent = (STATE.totalRepos || STATE.repos.length).toLocaleString();
+  src.textContent = "source: " + (STATE.source || (apiOnline ? "gitlawb-live" : "local seed"));
+
+  const q = DISCOVER.q.trim().toLowerCase();
+  let filtered = STATE.repos.filter(r => {
+    if(DISCOVER.tier === "all") {}
+    else if(DISCOVER.tier === "minted")    { if(!r.minted) return false; }
+    else if(DISCOVER.tier === "available") { if(r.minted) return false; }
+    else if(r.rarity.tier !== parseInt(DISCOVER.tier,10)) return false;
+
+    if(!q) return true;
+    return r.name.toLowerCase().includes(q)
+        || r.did.toLowerCase().includes(q)
+        || r.desc.toLowerCase().includes(q);
+  });
+
+  filtered.sort((a,b) => b.rarity.tier - a.rarity.tier || b.fileSizeKB - a.fileSizeKB);
+  const shown = filtered.slice(0, DISCOVER.maxRender);
+  meta.textContent = filtered.length.toLocaleString();
+
+  if(!shown.length){
+    list.innerHTML = `<div class="disc-empty">▌ NO REPOS MATCH</div>`;
+    return;
+  }
+  const truncatedNote = filtered.length > shown.length
+    ? `<div class="disc-empty" style="font-size:9px;">▌ showing top ${shown.length} of ${filtered.length} — refine your search</div>`
+    : "";
+  list.innerHTML = shown.map(r => {
+    const statusCls = r.minted ? "minted" : "available";
+    const statusTxt = r.minted ? "MINTED · L"+r.level : "AVAILABLE";
+    const art = r.artThumbUrl || r.imageUrl || r.artUrl;
+    const thumb = art
+      ? `<img class="disc-thumb" src="${escapeHtml(art)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'disc-thumb disc-thumb-empty',textContent:'NFT'}))" />`
+      : `<div class="disc-thumb disc-thumb-empty">NFT</div>`;
+    return `<div class="disc-row" data-fullid="${escapeHtml(r.fullId)}">
+      <span class="disc-rarity-chip" style="background:${r.rarity.color}"></span>
+      ${thumb}
+      <span class="disc-name">${escapeHtml(r.name)}<span class="did">@${escapeHtml(r.did.slice(0,8))}…</span></span>
+      <span class="disc-size">${formatSize(r.fileSizeKB)}</span>
+      <span class="disc-status ${statusCls}">${statusTxt}</span>
+    </div>`;
+  }).join("") + truncatedNote;
+
+  list.querySelectorAll(".disc-row").forEach(row => {
+    row.addEventListener("click", () => {
+      const fullId = row.dataset.fullid;
+      const repo = STATE.repos.find(x => x.fullId === fullId);
+      if(!repo) return;
+      closeAllModals();
+      flyToRepo(repo);
+    });
+  });
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+
+function flyToRepo(repo){
+  const entry = buildingMeshes.find(b => b.repo === repo);
+  if(!entry) return;
+  const px = entry.mesh.position.x;
+  const pz = entry.mesh.position.z;
+
+  camYaw = Math.atan2(pz, px) + Math.PI;
+
+  const r = Math.hypot(px, pz);
+  camDist = Math.max(45, Math.min(120, r * 0.55 + 35));
+  selectBuilding(entry.mesh);
+}
+
+(function bindDiscover(){
+  const search = document.getElementById("discSearch");
+  if(search){
+    search.addEventListener("input", () => {
+      DISCOVER.q = search.value;
+      renderDiscoverList();
+    });
+  }
+  document.querySelectorAll(".disc-filter").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".disc-filter").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      DISCOVER.tier = btn.dataset.tier;
+      renderDiscoverList();
+    });
+  });
+})();
+
+function refreshLeaderboard(){
+  const rows = [...STATE.repos]
+    .map(r => ({ r, score: r.rarity.tier * 1000 + r.level * 50 + r.stars * 3 + Math.log10(r.fileSizeKB+1) * 8 }))
+    .sort((a,b) => b.score - a.score)
+    .slice(0, 25);
+  const body = document.getElementById("lbBody");
+  body.innerHTML = rows.map((row, i) => {
+    const r = row.r;
+    const rankCls = i===0?"r1":i===1?"r2":i===2?"r3":"";
+    return `<tr>
+      <td><span class="lb-rank ${rankCls}">#${(i+1).toString().padStart(2,"0")}</span></td>
+      <td class="lb-name">${r.name}</td>
+      <td style="color:var(--text-dim);">@${r.did.slice(0,8)}…</td>
+      <td><span class="lb-rarity" style="color:${r.rarity.color}">${r.rarity.name}</span></td>
+      <td>${r.level}</td>
+      <td style="color:var(--gold);">${r.stars}</td>
+      <td style="color:var(--text-dim);">${formatSize(r.fileSizeKB)}</td>
+    </tr>`;
+  }).join("");
+}
+
+function refreshUpgrade(){
+  const body = document.getElementById("upgradeBody");
+  const owned = STATE.repos.filter(r => r.minted && (r.owner === STATE.walletAddrFull || r.owner === STATE.walletAddr));
+  if(!owned.length){
+    body.innerHTML = `<div class="empty-state">▌ NO BUILDINGS MINTED YET<br><br>MINT A BUILDING<br>TO UNLOCK UPGRADES</div>`;
+    return;
+  }
+  body.innerHTML = `
+    <p class="lead">Your minted buildings. Spend <b style="color:var(--gold)">$LAWBWORLD</b> to raise the level.</p>
+    <p style="font-size:11px;color:var(--text-dim);margin-bottom:12px;">Wallet: <b style="color:var(--gold)">${STATE.walletBalLAWB} $LAWBWORLD</b></p>
+    ${owned.map(r => {
+      const nextLvl = r.level + 1;
+      const cost = nextLvl * 25;
+      const maxed = r.level >= 10;
+      const cells = Array.from({length:10}, (_,i)=>`<div class="lvl-cell ${i<r.level?'filled':''}"></div>`).join("");
+      return `
+        <div class="upgrade-card">
+          <h3 style="color:${r.rarity.color}">${r.name}</h3>
+          <div style="font-size:10px;color:var(--text-dim);">${r.fullId} · ${r.rarity.name}</div>
+          <div class="lvl-bar">${cells}</div>
+          <div class="upgrade-cost">
+            <div class="cost">LVL <b style="color:var(--text);">${r.level}</b> → ${maxed?"MAX":nextLvl} · cost <b>${maxed?"—":cost+" $LAWBWORLD"}</b></div>
+            <button class="btn-upgrade" data-upgrade="${r.fullId}" ${maxed?'disabled':''} ${STATE.walletBalLAWB<cost?'disabled':''}>${maxed?"MAXED":"UPGRADE"}</button>
+          </div>
+        </div>
+      `;
+    }).join("")}
+  `;
+  body.querySelectorAll("[data-upgrade]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const r = STATE.repos.find(x => x.fullId === btn.dataset.upgrade);
+      if(!r || r.level >= 10) return;
+      const cost = (r.level+1) * 25;
+      if(STATE.walletBalLAWB < cost){ toast("Insufficient $LAWBWORLD", "error"); return; }
+
+      let success = false;
+      if(apiOnline){
+        try{
+          const res = await apiCall("/upgrade", { method:"POST", body:{fullId:r.fullId, walletAddress:STATE.walletAddrFull} });
+          if(res && res.ok){
+            r.level = res.level;
+            STATE.walletBalLAWB = res.balance ?? (STATE.walletBalLAWB - cost);
+            success = true;
+          }
+        }catch(e){ console.warn("[api] upgrade failed", e); }
+      }
+      if(!success){
+        STATE.walletBalLAWB -= cost;
+        r.level++;
+        await saveLocalState();
+      }
+      document.getElementById("walletBal").textContent = `${STATE.walletBalLAWB} $LAWBWORLD`;
+      refreshUpgrade();
+      const entry = buildingMeshes.find(b => b.repo === r);
+      if(entry){
+        entry.mesh.traverse(o => {
+          if(o.userData.aura) o.material.color = new THREE.Color(r.rarity.color).lerp(new THREE.Color(0xffbe0b), 0.5);
+        });
+      }
+      toast(`✓ ${r.name} → LVL ${r.level}`, "gold");
+      refreshLeaderboard();
+      if(STATE.selected && STATE.selected.userData.repo === r) showProfile(r, STATE.selected);
+    });
+  });
+}
+
+let arc = null;
+function initArcade(){
+  const c = document.getElementById("arcade-canvas");
+  if(!c) return;
+  if(arc && arc.raf) cancelAnimationFrame(arc.raf);
+  const ctx = c.getContext("2d");
+  arc = { ctx, c, player:{x:c.width/2, y:c.height-40, w:24, h:24}, drops:[], score:0, reward:0, speed:2.4, running:false, keys:{}, spawnT:0 };
+  document.getElementById("arcScore").textContent = "0";
+  document.getElementById("arcReward").textContent = "0";
+  document.getElementById("arcBest").textContent = STATE.arcBest;
+  drawArcadeIdle();
+  window.addEventListener("keydown", arcadeKeyDown);
+  window.addEventListener("keyup", arcadeKeyUp);
+}
+function arcadeKeyDown(e){
+  if(!arc) return;
+  arc.keys[e.key.toLowerCase()] = true;
+  if(e.key === " " || e.key === "Space"){
+    if(!arc.running) startArcade();
+  }
+}
+function arcadeKeyUp(e){
+  if(!arc) return;
+  arc.keys[e.key.toLowerCase()] = false;
+}
+function drawArcadeIdle(){
+  const {ctx, c} = arc;
+  ctx.fillStyle = "#020409"; ctx.fillRect(0,0,c.width,c.height);
+  ctx.strokeStyle = "rgba(0,245,212,0.1)";
+  for(let x=0;x<c.width;x+=20){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,c.height); ctx.stroke(); }
+  for(let y=0;y<c.height;y+=20){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(c.width,y); ctx.stroke(); }
+  ctx.fillStyle = "#00f5d4"; ctx.font = "bold 22px Silkscreen, monospace"; ctx.textAlign = "center";
+  ctx.fillText("PRESS SPACE TO START", c.width/2, c.height/2 - 10);
+  ctx.fillStyle = "#8a93a8"; ctx.font = "11px JetBrains Mono, monospace";
+  ctx.fillText("← → STEER · CATCH GOLD · DODGE RED", c.width/2, c.height/2 + 14);
+}
+function startArcade(){
+  arc.running = true; arc.score = 0; arc.reward = 0; arc.drops = []; arc.spawnT = 0; arc.speed = 2.4;
+  arc.player.x = arc.c.width/2; arcadeLoop();
+}
+function arcadeLoop(){
+  if(!arc || !arc.running) return;
+  const {ctx, c, player, drops, keys} = arc;
+  if(keys["arrowleft"] || keys["a"]) player.x -= 5;
+  if(keys["arrowright"] || keys["d"]) player.x += 5;
+  player.x = Math.max(player.w/2, Math.min(c.width-player.w/2, player.x));
+
+  arc.spawnT++;
+  if(arc.spawnT > Math.max(14, 30 - arc.score/30)){
+    arc.spawnT = 0;
+    const isBad = Math.random() < 0.32;
+    drops.push({ x: Math.random()*(c.width-20)+10, y: -10, r: isBad ? 9 : 8, bad: isBad, gold: !isBad && Math.random()<0.15 });
+  }
+  for(let i=drops.length-1;i>=0;i--){
+    const d = drops[i];
+    d.y += arc.speed + (d.bad?0.6:0);
+    if(Math.abs(d.x - player.x) < player.w/2 + d.r && Math.abs(d.y - player.y) < player.h/2 + d.r){
+      if(d.bad){ endArcade(); return; }
+      else { arc.score += d.gold ? 25 : 5; if(d.gold) arc.reward += 1; drops.splice(i,1); continue; }
+    }
+    if(d.y > c.height + 20) drops.splice(i,1);
+  }
+  arc.speed += 0.0018;
+
+  ctx.fillStyle = "#020409"; ctx.fillRect(0,0,c.width,c.height);
+  ctx.strokeStyle = "rgba(0,245,212,0.06)";
+  const off = (Date.now()/50) % 20;
+  for(let y=-20;y<c.height;y+=20){ ctx.beginPath(); ctx.moveTo(0, y+off); ctx.lineTo(c.width, y+off); ctx.stroke(); }
+  for(let x=0;x<c.width;x+=20){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,c.height); ctx.stroke(); }
+  drops.forEach(d => {
+    if(d.bad){ ctx.fillStyle="#ff3b3b"; } else if(d.gold){ ctx.fillStyle="#ffbe0b"; } else { ctx.fillStyle="#00f5d4"; }
+    ctx.fillRect(d.x-d.r, d.y-d.r, d.r*2, d.r*2);
+    ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.fillRect(d.x-d.r+2, d.y-d.r+2, 3, 3);
+  });
+  ctx.fillStyle = "#00f5d4"; ctx.fillRect(player.x-player.w/2, player.y-player.h/2, player.w, player.h);
+  ctx.fillStyle = "#ffbe0b";
+  for(let yy=0;yy<3;yy++) for(let xx=0;xx<3;xx++) ctx.fillRect(player.x-player.w/2+3+xx*7, player.y-player.h/2+3+yy*7, 4, 4);
+  document.getElementById("arcScore").textContent = arc.score;
+  document.getElementById("arcReward").textContent = arc.reward;
+  arc.raf = requestAnimationFrame(arcadeLoop);
+}
+function endArcade(){
+  arc.running = false;
+  const {ctx, c} = arc;
+  ctx.fillStyle = "rgba(255,59,59,0.4)"; ctx.fillRect(0,0,c.width,c.height);
+  ctx.fillStyle = "#ff3b3b"; ctx.font = "bold 26px Silkscreen, monospace"; ctx.textAlign = "center";
+  ctx.fillText("GAME OVER", c.width/2, c.height/2 - 10);
+  ctx.fillStyle = "#fff"; ctx.font = "12px JetBrains Mono, monospace";
+  ctx.fillText("SCORE: " + arc.score + "  ·  +$LAWBWORLD " + arc.reward, c.width/2, c.height/2 + 14);
+  ctx.fillText("SPACE to restart", c.width/2, c.height/2 + 36);
+  if(arc.score > STATE.arcBest){
+    STATE.arcBest = arc.score;
+    document.getElementById("arcBest").textContent = STATE.arcBest;
+    toast("✓ NEW HIGH SCORE", "gold");
+  }
+  if(arc.reward > 0){
+    STATE.walletBalLAWB += arc.reward;
+    document.getElementById("walletBal").textContent = `${STATE.walletBalLAWB} $LAWBWORLD`;
+  }
+  saveLocalState();
+}
+
+async function boot(){
+  const fill = document.getElementById("loaderFill");
+  const text = document.getElementById("loaderText");
+  const stages = [
+    [10, "SYNCING GITLAWB NODE…"],
+    [22, "PARSING REPO INDEX…"],
+    [35, "PROBING BACKEND API…"],
+    [50, "RESOLVING DID KEYS…"],
+    [68, "RENDERING VOXEL CITY…"],
+    [82, "BOOTING TRANSMITTERS…"],
+    [94, "INDEXING MINT REGISTRY…"],
+    [100, "READY"],
+  ];
+
+  STATE.repos = buildRepoData();
+
+  for(const [pct, label] of stages){
+    fill.style.width = pct + "%";
+    text.textContent = "▌ " + label;
+    if(pct === 35){
+      const timeout = new Promise(r => setTimeout(r, 8000));
+      await Promise.race([
+        (async () => {
+          await tryConnectAPI();
+          if(apiOnline) await loadStateFromAPI();
+          else await loadLocalState();
+        })(),
+        timeout,
+      ]);
+    }
+
+    await new Promise(r => setTimeout(r, 130 + Math.random()*100));
+  }
+
+  text.textContent = `▌ ${STATE.repos.length.toLocaleString()} REPOS · BUILDING SKYLINE…`;
+
+  initThree();
+  renderPeers();
+  updateStats();
+  updateCompass();
+  setTimeout(() => { document.getElementById("loading").classList.add("done"); }, 200);
+}
+boot();
+</script>
+</body>
+</html>

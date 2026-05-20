@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>LAWBWORLD · Discover</title>
+<link rel="icon" type="image/jpeg" href="/assets/logo.jpg" />
+<link rel="apple-touch-icon" href="/assets/logo.jpg" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --bg-0:#060912; --bg-1:#0a0f1f; --bg-2:#111a2e;
+    --surface:rgba(15,20,35,0.78); --surface-2:rgba(20,28,48,0.92);
+    --border:rgba(0,245,212,0.18); --border-strong:rgba(0,245,212,0.45);
+    --text:#e7ecf3; --text-dim:#8a93a8; --text-muted:#525c72;
+    --accent:#00f5d4; --accent-2:#ff006e; --gold:#ffbe0b; --danger:#ff3b3b;
+    --common:#5b6478; --uncommon:#34d399; --rare:#38bdf8; --epic:#c084fc; --legendary:#fbbf24;
+    --pixel:'Silkscreen',monospace; --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  html,body{min-height:100%;background:var(--bg-0);color:var(--text);font-family:var(--mono);}
+  body{
+    background:
+      radial-gradient(circle at 20% 0%, rgba(0,245,212,0.05), transparent 50%),
+      radial-gradient(circle at 80% 100%, rgba(192,132,252,0.04), transparent 50%),
+      var(--bg-0);
+  }
+  a{color:inherit;text-decoration:none;}
+  button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer;}
+
+  /* HEADER */
+  header{
+    position:sticky;top:0;z-index:10;backdrop-filter:blur(14px);
+    background:linear-gradient(180deg, rgba(6,9,18,0.95), rgba(6,9,18,0.7));
+    border-bottom:1px solid var(--border);
+  }
+  .head-row{
+    max-width:1480px;margin:0 auto;padding:12px 20px;
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+  .brand-mark{
+    width:34px;height:34px;display:block;
+    object-fit:cover;
+    background:var(--accent);
+    box-shadow:0 0 0 2px #001110, 0 0 20px rgba(0,245,212,0.55);
+    image-rendering:pixelated;
+  }
+  .brand-name{font-family:var(--pixel);font-size:16px;letter-spacing:1px;}
+  .brand-name span{color:var(--accent);}
+  nav.tabs{display:flex;gap:6px;margin-left:auto;}
+  .tab{
+    font-family:var(--pixel);font-size:9px;letter-spacing:1px;
+    padding:8px 14px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text-dim);
+    transition:all 0.15s;text-transform:uppercase;
+  }
+  .tab:hover{color:var(--accent);border-color:var(--border-strong);background:var(--surface-2);}
+  .tab.active{color:var(--bg-0);background:var(--accent);border-color:var(--accent);}
+
+  /* TOOLBAR */
+  .toolbar{
+    max-width:1480px;margin:0 auto;padding:18px 20px 10px;
+    display:grid;gap:12px;
+  }
+  .toolbar-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  #search{
+    flex:1;min-width:280px;padding:11px 14px;
+    background:rgba(10,15,30,0.8);color:var(--text);
+    border:1px solid var(--border);font-family:var(--mono);font-size:12px;
+    outline:none;transition:border-color 0.15s;
+  }
+  #search:focus{border-color:var(--border-strong);}
+  #search::placeholder{color:var(--text-muted);}
+  .filters{display:flex;flex-wrap:wrap;gap:5px;}
+  .filter-btn{
+    --c:var(--accent);
+    font-family:var(--pixel);font-size:8px;letter-spacing:1px;
+    padding:7px 11px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text-dim);
+  }
+  .filter-btn:hover{color:var(--c);border-color:var(--c);}
+  .filter-btn.active{color:#001110;background:var(--c);border-color:var(--c);}
+  .toolbar-meta{font-family:var(--pixel);font-size:9px;letter-spacing:1px;color:var(--text-dim);}
+  .toolbar-meta b{color:var(--accent);}
+
+  /* GRID */
+  main{max-width:1480px;margin:0 auto;padding:10px 20px 60px;}
+  .grid{
+    display:grid;gap:14px;
+    grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+  }
+  .card{
+    position:relative;background:var(--surface-2);
+    border:1px solid var(--border);
+    transition:transform 0.15s ease, border-color 0.15s, box-shadow 0.15s;
+    cursor:pointer;display:flex;flex-direction:column;
+  }
+  .card:hover{
+    transform:translateY(-2px);border-color:var(--border-strong);
+    box-shadow:0 6px 24px rgba(0,245,212,0.18);
+  }
+  .card-art{
+    aspect-ratio:1/1;width:100%;background:#0a0e1a;
+    position:relative;overflow:hidden;
+  }
+  .card-art img{
+    width:100%;height:100%;object-fit:cover;display:block;
+    image-rendering:pixelated;
+  }
+  .card-art .rarity-chip{
+    position:absolute;top:8px;left:8px;
+    font-family:var(--pixel);font-size:7px;letter-spacing:1px;
+    padding:4px 7px;border:1px solid currentColor;
+    backdrop-filter:blur(8px);background:rgba(0,0,0,0.55);
+  }
+  .card-art .status-chip{
+    position:absolute;top:8px;right:8px;
+    font-family:var(--pixel);font-size:7px;letter-spacing:1px;
+    padding:4px 7px;border:1px solid var(--border);
+    backdrop-filter:blur(8px);background:rgba(0,0,0,0.55);color:var(--text-dim);
+  }
+  .card-art .status-chip.minted{color:var(--gold);border-color:rgba(251,191,36,0.55);}
+  .card-art .status-chip.available{color:var(--accent);border-color:var(--border-strong);}
+  .card-body{padding:11px 13px 13px;display:flex;flex-direction:column;gap:6px;}
+  .card-name{
+    font-family:var(--pixel);font-size:11px;color:var(--text);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0.4px;
+  }
+  .card-did{font-size:9px;color:var(--text-muted);font-family:var(--mono);}
+  .card-row{
+    display:flex;justify-content:space-between;align-items:center;font-size:10px;
+    margin-top:2px;color:var(--text-dim);
+  }
+  .card-row .size{color:var(--gold);font-family:var(--pixel);font-size:8px;letter-spacing:0.5px;}
+  .card-row .stars{color:var(--accent);}
+
+  .pager{display:flex;justify-content:center;gap:10px;padding:30px 0;}
+  .pager button{
+    font-family:var(--pixel);font-size:9px;letter-spacing:1px;
+    padding:9px 16px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text-dim);transition:all 0.15s;
+  }
+  .pager button:hover:not(:disabled){color:var(--accent);border-color:var(--border-strong);}
+  .pager button:disabled{opacity:0.4;cursor:not-allowed;}
+  .pager .info{font-family:var(--pixel);font-size:9px;letter-spacing:1px;color:var(--text-dim);align-self:center;}
+
+  .empty{padding:80px 20px;text-align:center;color:var(--text-muted);font-family:var(--pixel);font-size:12px;letter-spacing:1px;}
+
+  @media (max-width:600px){
+    .head-row{padding:10px 12px;}
+    .toolbar{padding:14px 12px 8px;}
+    main{padding:8px 12px 40px;}
+    .grid{grid-template-columns:repeat(auto-fill, minmax(150px, 1fr));gap:10px;}
+    .card-name{font-size:9px;}
+    .card-did{font-size:8px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+    <a href="/" class="brand">
+      <img class="brand-mark" src="/assets/logo.jpg" alt="Lawbworld logo" />
+      <div class="brand-name">LAWB<span>WORLD</span></div>
+    </a>
+    <nav class="tabs">
+      <a class="tab" href="/">CITY</a>
+      <a class="tab active" href="/discover">DISCOVER</a>
+      <a class="tab" href="/">LEADERBOARD</a>
+      <button class="tab" id="btnConnect" style="border-color:var(--accent);color:var(--accent);">CONNECT</button>
+    </nav>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="toolbar-row">
+    <input id="search" type="search" placeholder="search 2,205 repositories by name, DID, or description…" autocomplete="off" />
+  </div>
+  <div class="toolbar-row">
+    <div class="filters" id="filters">
+      <button class="filter-btn active" data-tier="all">ALL</button>
+      <button class="filter-btn" data-tier="4" style="--c:#fbbf24">LEGENDARY</button>
+      <button class="filter-btn" data-tier="3" style="--c:#c084fc">EPIC</button>
+      <button class="filter-btn" data-tier="2" style="--c:#38bdf8">RARE</button>
+      <button class="filter-btn" data-tier="1" style="--c:#34d399">UNCOMMON</button>
+      <button class="filter-btn" data-tier="0" style="--c:#5b6478">COMMON</button>
+      <button class="filter-btn" data-tier="minted" style="--c:#ffbe0b">MINTED</button>
+      <button class="filter-btn" data-tier="available" style="--c:#00f5d4">AVAILABLE</button>
+    </div>
+    <div class="toolbar-meta">
+      showing <b id="shownCount">0</b> of <b id="totalCount">2,205</b> · page <b id="pageNum">1</b>/<b id="pageMax">1</b>
+      · <button id="btnRefresh" class="filter-btn" style="--c:#00f5d4">⟳ REFRESH</button>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div id="grid" class="grid"></div>
+  <div class="pager">
+    <button id="prev">◄ PREV</button>
+    <span class="info">PAGE <span id="pageInfo">1 / 1</span></span>
+    <button id="next">NEXT ►</button>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script src="/wallet.js"></script>
+<script>
+const API = window.location.origin + "/api";
+const PAGE_SIZE = 60;
+
+const connectBtn = document.getElementById("btnConnect");
+function updateConnectBtn(){
+  if (LawbWallet.address) {
+    connectBtn.textContent = LawbWallet.short();
+    connectBtn.title = LawbWallet.address;
+  } else {
+    connectBtn.textContent = "CONNECT";
+  }
+}
+connectBtn.addEventListener("click", async () => {
+  if (LawbWallet.address) { LawbWallet.disconnect(); updateConnectBtn(); return; }
+  try { await LawbWallet.connect(); updateConnectBtn(); }
+  catch (e) { alert(e.message); }
+});
+LawbWallet.onAccountsChanged(async (a) => {
+  if (!a.length) LawbWallet.disconnect(); else await LawbWallet.restore();
+  updateConnectBtn();
+});
+LawbWallet.restore().then(updateConnectBtn);
+
+let allRepos = [];
+let filtered = [];
+let state = { q: "", tier: "all", page: 1 };
+
+const RARITY_COLOR = { COMMON:"#5b6478", UNCOMMON:"#34d399", RARE:"#38bdf8", EPIC:"#c084fc", LEGENDARY:"#fbbf24" };
+
+function formatSize(kb){
+  if(kb < 1024) return kb + " KB";
+  return (kb/1024).toFixed(2) + " MB";
+}
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+
+async function loadRepos(){
+  const r = await fetch(API + "/repos?limit=5000").then(r => r.json());
+  allRepos = r.repos || [];
+  document.getElementById("totalCount").textContent = allRepos.length.toLocaleString();
+  applyFilters();
+}
+
+function applyFilters(){
+  const q = state.q.trim().toLowerCase();
+  filtered = allRepos.filter(r => {
+    if(state.tier === "all"){ }
+    else if(state.tier === "minted")    { if(!r.minted) return false; }
+    else if(state.tier === "available") { if(r.minted) return false; }
+    else { if(r.rarityTier !== parseInt(state.tier, 10)) return false; }
+    if(!q) return true;
+    return r.name.toLowerCase().includes(q)
+        || r.did.toLowerCase().includes(q)
+        || (r.desc || "").toLowerCase().includes(q);
+  });
+  filtered.sort((a, b) => b.rarityTier - a.rarityTier || b.fileSizeKB - a.fileSizeKB);
+  state.page = 1;
+  render();
+}
+
+function render(){
+  const grid = document.getElementById("grid");
+  const total = filtered.length;
+  const maxPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  state.page = Math.min(state.page, maxPage);
+  const start = (state.page - 1) * PAGE_SIZE;
+  const slice = filtered.slice(start, start + PAGE_SIZE);
+
+  document.getElementById("shownCount").textContent = slice.length.toLocaleString();
+  document.getElementById("pageNum").textContent = state.page;
+  document.getElementById("pageMax").textContent = maxPage;
+  document.getElementById("pageInfo").textContent = `${state.page} / ${maxPage}`;
+  document.getElementById("prev").disabled = state.page <= 1;
+  document.getElementById("next").disabled = state.page >= maxPage;
+
+  if(!slice.length){
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1;">▌ NO REPOSITORIES MATCH</div>`;
+    return;
+  }
+
+  grid.innerHTML = slice.map(r => {
+    const img = r.artCityUrl || r.artThumbUrl || r.artUrl || "";
+    const color = RARITY_COLOR[r.rarity] || "#5b6478";
+    const statusCls = r.minted ? "minted" : "available";
+    const statusTxt = r.minted ? `MINTED · L${r.level}` : "AVAILABLE";
+    return `
+      <a class="card" href="/mint?id=${encodeURIComponent(r.fullId)}">
+        <div class="card-art">
+          ${img ? `<img src="${esc(img)}" alt="${esc(r.name)}" loading="lazy" />` : ""}
+          <span class="rarity-chip" style="color:${color}">${esc(r.rarity)}</span>
+          <span class="status-chip ${statusCls}">${statusTxt}</span>
+        </div>
+        <div class="card-body">
+          <div class="card-name">${esc(r.name)}</div>
+          <div class="card-did">@${esc(r.did.slice(0,12))}…</div>
+          <div class="card-row">
+            <span class="size">${formatSize(r.fileSizeKB)}</span>
+            <span class="stars">★ ${r.stars || 0}</span>
+          </div>
+        </div>
+      </a>
+    `;
+  }).join("");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+document.getElementById("search").addEventListener("input", e => {
+  state.q = e.target.value; applyFilters();
+});
+document.getElementById("filters").addEventListener("click", e => {
+  if(!e.target.classList.contains("filter-btn")) return;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  e.target.classList.add("active");
+  state.tier = e.target.dataset.tier;
+  applyFilters();
+});
+document.getElementById("prev").addEventListener("click", () => { state.page--; render(); });
+document.getElementById("next").addEventListener("click", () => { state.page++; render(); });
+
+document.getElementById("btnRefresh").addEventListener("click", async () => {
+  const b = document.getElementById("btnRefresh");
+  const txt = b.textContent;
+  b.textContent = "⟳ SYNCING…";
+  b.disabled = true;
+  try { await loadRepos(); }
+  finally { b.textContent = txt; b.disabled = false; }
+});
+setInterval(() => loadRepos().catch(() => {}), 30000);
+loadRepos().catch(e => {
+  document.getElementById("grid").innerHTML = `<div class="empty" style="grid-column:1/-1;color:var(--danger);">▌ API OFFLINE — start the server</div>`;
+});
+</script>
+</body>
+</html>

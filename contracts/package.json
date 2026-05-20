@@ -1,0 +1,29 @@
+{
+  "name": "lawbworld-contracts",
+  "version": "0.1.0",
+  "description": "Smart contracts for Lawbworld: $LAWB ERC-20 + LawbBuilding ERC-721.",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network base-sepolia",
+    "deploy:base": "hardhat run scripts/deploy.js --network base",
+    "deploy:mainnet": "hardhat run scripts/deploy-mainnet.js --network base",
+    "upgrade:sepolia": "hardhat run scripts/upgrade.js --network base-sepolia",
+    "upgrade:base": "hardhat run scripts/upgrade.js --network base",
+    "node": "hardhat node",
+    "clean": "hardhat clean"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/hardhat-upgrades": "^3.5.0",
+    "hardhat": "^2.22.10",
+    "chai": "^4.5.0",
+    "ethers": "^6.13.2",
+    "dotenv": "^16.4.5"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2",
+    "@openzeppelin/contracts-upgradeable": "^5.0.2"
+  }
+}
